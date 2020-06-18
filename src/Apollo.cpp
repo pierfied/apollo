@@ -52,6 +52,7 @@
 #include "apollo/Logging.h"
 #include "apollo/Region.h"
 #include "apollo/ModelFactory.h"
+#include "apollo/models/PolicyNet.h"
 
 //
 #include "util/Debug.h"
@@ -695,131 +696,155 @@ Apollo::flushAllRegionMeasurements(int step)
     for( auto &it : regions ) {
         Region *reg = it.second;
 
-        if( reg->model->training && reg->best_policies.size() > 0 ) {
-            if( Config::APOLLO_REGION_MODEL ) {
-                //std::cout << "TRAIN MODEL PER REGION" << std::endl;
-                // Reset training vectors
-                train_features.clear();
-                train_responses.clear();
-                train_time_features.clear();
-                train_time_responses.clear();
+        if(Config::APOLLO_INIT_MODEL == "PolicyNet"){
+            std::vector<std::vector<float>> states;
+            std::vector<int> actions;
+            std::vector<double> rewards;
 
-                // Prepare training data
-                for(auto &it2 : reg->best_policies) {
-                    train_features.push_back( it2.first );
-                    train_responses.push_back( it2.second.first );
+            for (auto &measure: reg->trainMeasures) {
+                auto state = std::get<0>(measure);
+                auto policy = std::get<1>(measure);
+                auto actual_block_size = std::get<2>(measure);
+                auto duration = std::get<3>(measure);
 
-                    std::vector< float > feature_vector = it2.first;
-                    feature_vector.push_back( it2.second.first );
-                    train_time_features.push_back( feature_vector );
-                    train_time_responses.push_back( it2.second.second );
-                }
-            }
-            else {
-                //std::cout << "ONE SINGLE MODEL" << std::endl;
+                states.push_back(state);
+                actions.push_back(policy);
+                rewards.push_back(-std::log(duration));
             }
 
-            if( Config::APOLLO_TRACE_BEST_POLICIES ) {
-                std::stringstream trace_out;
-                trace_out << "=== Rank " << rank \
-                    << " BEST POLICIES Region " << reg->name << " ===" << std::endl;
-                for( auto &b : reg->best_policies ) {
-                    trace_out << "[ ";
-                    for(auto &f : b.first)
-                        trace_out << (int)f << ", ";
-                    trace_out << "] P:" \
-                        << b.second.first << " T: " << b.second.second << std::endl;
+            PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());
+
+            model->trainNet(states, actions, rewards);
+
+            reg->trainMeasures.clear();
+            model->cache2.clear();
+        }else {
+            if (reg->model->training && reg->best_policies.size() > 0) {
+                if (Config::APOLLO_REGION_MODEL) {
+                    //std::cout << "TRAIN MODEL PER REGION" << std::endl;
+                    // Reset training vectors
+                    train_features.clear();
+                    train_responses.clear();
+                    train_time_features.clear();
+                    train_time_responses.clear();
+
+                    // Prepare training data
+                    for (auto &it2 : reg->best_policies) {
+                        train_features.push_back(it2.first);
+                        train_responses.push_back(it2.second.first);
+
+                        std::vector<float> feature_vector = it2.first;
+                        feature_vector.push_back(it2.second.first);
+                        train_time_features.push_back(feature_vector);
+                        train_time_responses.push_back(it2.second.second);
+                    }
+                } else {
+                    //std::cout << "ONE SINGLE MODEL" << std::endl;
                 }
-                trace_out << ".-" << std::endl;
-                std::cout << trace_out.str();
-                std::ofstream fout("step-" + std::to_string(step) + \
+
+                if (Config::APOLLO_TRACE_BEST_POLICIES) {
+                    std::stringstream trace_out;
+                    trace_out << "=== Rank " << rank \
+ << " BEST POLICIES Region " << reg->name << " ===" << std::endl;
+                    for (auto &b : reg->best_policies) {
+                        trace_out << "[ ";
+                        for (auto &f : b.first)
+                            trace_out << (int) f << ", ";
+                        trace_out << "] P:" \
+ << b.second.first << " T: " << b.second.second << std::endl;
+                    }
+                    trace_out << ".-" << std::endl;
+                    std::cout << trace_out.str();
+                    std::ofstream fout("step-" + std::to_string(step) + \
                         "-rank-" + std::to_string(rank) + "-" + reg->name + "-best_policies.txt"); \
                     fout << trace_out.str(); \
                     fout.close();
-            }
+                }
 
-            reg->model = ModelFactory::createDecisionTree(
-                    num_policies,
-                    train_features,
-                    train_responses );
+                reg->model = ModelFactory::createDecisionTree(
+                        num_policies,
+                        train_features,
+                        train_responses);
 
-            reg->time_model = ModelFactory::createRegressionTree(
-                    train_time_features,
-                    train_time_responses );
+                reg->time_model = ModelFactory::createRegressionTree(
+                        train_time_features,
+                        train_time_responses);
 
-            if( Config::APOLLO_STORE_MODELS ) {
-                reg->model->store( "dtree-step-" + std::to_string( step ) \
-                        + "-rank-" + std::to_string( rank ) \
-                        + "-" + reg->name + ".yaml" );
-                reg->time_model->store("regtree-step-" + std::to_string( step ) \
-                        + "-rank-" + std::to_string( rank ) \
-                        + "-" + reg->name + ".yaml");
-            }
-        }
-        else {
-            if( Config::APOLLO_RETRAIN_ENABLE && reg->time_model ) {
-                //std::cout << "=== BEST POLICIES TRAINED REGION " << reg->name << " ===" << std::endl;
-                //for( auto &b : reg->best_policies ) {
-                //    std::cout << "[ " << (int)b.first[0] << " ]: P:" \
+                if (Config::APOLLO_STORE_MODELS) {
+                    reg->model->store("dtree-step-" + std::to_string(step) \
+ + "-rank-" + std::to_string(rank) \
+ + "-" + reg->name + ".yaml");
+                    reg->time_model->store("regtree-step-" + std::to_string(step) \
+ + "-rank-" + std::to_string(rank) \
+ + "-" + reg->name + ".yaml");
+                }
+            } else {
+                if (Config::APOLLO_RETRAIN_ENABLE && reg->time_model) {
+                    //std::cout << "=== BEST POLICIES TRAINED REGION " << reg->name << " ===" << std::endl;
+                    //for( auto &b : reg->best_policies ) {
+                    //    std::cout << "[ " << (int)b.first[0] << " ]: P:" \
                 //        << b.second.first << " T: " << b.second.second << std::endl;
-                //}
-                //std::cout << ".-" << std::endl;
+                    //}
+                    //std::cout << ".-" << std::endl;
 
-                std::stringstream trace_out;
-                // Check drifing regions for re-training
-                int drifting = 0;
-                for(auto &it2 : reg->best_policies) {
-                    double time_avg = it2.second.second;
+                    std::stringstream trace_out;
+                    // Check drifing regions for re-training
+                    int drifting = 0;
+                    for (auto &it2 : reg->best_policies) {
+                        double time_avg = it2.second.second;
 
-                    std::vector< float > feature_vector = it2.first;
-                    feature_vector.push_back( it2.second.first );
-                    double time_pred = reg->time_model->getTimePrediction( feature_vector );
+                        std::vector<float> feature_vector = it2.first;
+                        feature_vector.push_back(it2.second.first);
+                        double time_pred = reg->time_model->getTimePrediction(feature_vector);
 
-                    if( time_avg > ( Config::APOLLO_RETRAIN_TIME_THRESHOLD * time_pred ) ) {
-                        drifting++;
-                        if( Config::APOLLO_TRACE_RETRAIN ) {
-                            std::ios_base::fmtflags f( trace_out.flags() );
-                            trace_out << std::setprecision(3) << std::scientific \
-                                << "step " << step \
-                                << " rank " << rank \
-                                << " drift " << reg->name \
-                                << "[ "; \
-                                for(auto &f : it2.first ) { \
-                                    trace_out << (int)f << ", "; \
+                        if (time_avg > (Config::APOLLO_RETRAIN_TIME_THRESHOLD * time_pred)) {
+                            drifting++;
+                            if (Config::APOLLO_TRACE_RETRAIN) {
+                                std::ios_base::fmtflags f(trace_out.flags());
+                                trace_out << std::setprecision(3) << std::scientific \
+ << "step " << step \
+ << " rank " << rank \
+ << " drift " << reg->name \
+ << "[ "; \
+                                for (auto &f : it2.first) {
+                                    \
+                                    trace_out << (int) f << ", "; \
+
                                 } \
-                            trace_out.flags( f ); \
+                            trace_out.flags(f); \
                                 trace_out << "] P " << it2.second.first \
-                                << " time_avg " << time_avg \
-                                << " time_pred " << time_pred \
-                                << " time ratio " << ( time_avg / time_pred ) \
-                                << std::endl;
+ << " time_avg " << time_avg \
+ << " time_pred " << time_pred \
+ << " time ratio " << (time_avg / time_pred) \
+ << std::endl;
+                            }
                         }
                     }
-                }
 
-                if( drifting > 0 &&
-                        ( static_cast<float>(drifting) / reg->best_policies.size() )
+                    if (drifting > 0 &&
+                        (static_cast<float>(drifting) / reg->best_policies.size())
                         >=
-                        Config::APOLLO_RETRAIN_REGION_THRESHOLD ) {
-                    if( Config::APOLLO_TRACE_RETRAIN ) {
-                        trace_out << "step " << step \
-                            << " rank " << rank \
-                            << " retrain " << reg->name \
-                            << " drift ratio " \
-                            << drifting << " / " << reg->best_policies.size() \
-                            << std::endl;
+                        Config::APOLLO_RETRAIN_REGION_THRESHOLD) {
+                        if (Config::APOLLO_TRACE_RETRAIN) {
+                            trace_out << "step " << step \
+ << " rank " << rank \
+ << " retrain " << reg->name \
+ << " drift ratio " \
+ << drifting << " / " << reg->best_policies.size() \
+ << std::endl;
+                        }
+                        //reg->model = ModelFactory::createRandom( num_policies );
+                        reg->model = ModelFactory::createRoundRobin(num_policies);
                     }
-                    //reg->model = ModelFactory::createRandom( num_policies );
-                    reg->model = ModelFactory::createRoundRobin( num_policies );
-                }
 
-                if( Config::APOLLO_TRACE_RETRAIN ) {
-                    std::cout << trace_out.str();
-                    std::ofstream fout("step-" + std::to_string(step) \
-                            + "-rank-" + std::to_string(rank) \
-                            + "-retrain.txt");
-                    fout << trace_out.str();
-                    fout.close();
+                    if (Config::APOLLO_TRACE_RETRAIN) {
+                        std::cout << trace_out.str();
+                        std::ofstream fout("step-" + std::to_string(step) \
+ + "-rank-" + std::to_string(rank) \
+ + "-retrain.txt");
+                        fout << trace_out.str();
+                        fout.close();
+                    }
                 }
             }
         }
@@ -828,4 +853,15 @@ Apollo::flushAllRegionMeasurements(int step)
     }
 
     return;
+}
+
+void
+Apollo::clearTrainRegionMeasurements()
+{
+    std::stringstream granular_measures_string;
+    for( auto &it: regions ) {
+        Region *reg = it.second;
+
+        reg->trainMeasures.clear();
+    }
 }

@@ -96,6 +96,7 @@ class Apollo
         void *callpath_ptr;
 
         void flushAllRegionMeasurements(int step);
+        void clearTrainRegionMeasurements();
 
     private:
         Apollo();

@@ -20,6 +20,8 @@ class ModelFactory {
         static std::unique_ptr<TimingModel> createRegressionTree(
                 std::vector< std::vector<float> > &features,
                 std::vector<float> &responses );
+
+        static std::unique_ptr<PolicyModel> createPolicyNet(int numPolicies, int numFeatures);
 }; //end: ModelFactory
 
 

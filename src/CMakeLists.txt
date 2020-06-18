@@ -70,6 +70,7 @@ set(APOLLO_SOURCES
     models/RoundRobin.cpp
     models/DecisionTree.cpp
     models/RegressionTree.cpp
+    models/PolicyNet.cpp
     )
 
 add_library(apollo SHARED ${APOLLO_SOURCES})

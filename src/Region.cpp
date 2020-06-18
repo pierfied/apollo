@@ -144,6 +144,9 @@ Apollo::Region::Region(
         model = ModelFactory::createRoundRobin( apollo->num_policies );
         //std::cout << "Model RoundRobin" << std::endl;
     }
+    else if("PolicyNet" == model_str){
+        model = ModelFactory::createPolicyNet(apollo->num_policies, 1);
+    }
     else {
         std::cerr << "Invalid model env var: " + Config::APOLLO_INIT_MODEL << std::endl;
         abort();
@@ -239,6 +242,8 @@ Apollo::Region::end(double duration)
         iter->second->exec_count++;
         iter->second->time_total += duration;
     }
+
+    trainMeasures.push_back(std::make_tuple(features, current_policy, actual_block_size, duration));
 
     if (apollo->traceEnabled) {
         // TODO(cdw): extract the correct values.

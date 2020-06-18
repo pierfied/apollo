@@ -5,6 +5,7 @@
 #include "apollo/models/RoundRobin.h"
 #include "apollo/models/DecisionTree.h"
 #include "apollo/models/RegressionTree.h"
+#include "apollo/models/PolicyNet.h"
 
 std::unique_ptr<PolicyModel> ModelFactory::createStatic(int num_policies, int policy_choice) {
     return std::make_unique<Static>( num_policies, policy_choice );
@@ -30,3 +31,6 @@ std::unique_ptr<TimingModel> ModelFactory::createRegressionTree(
     return std::make_unique<RegressionTree>( features, responses );
 }
 
+std::unique_ptr<PolicyModel> ModelFactory::createPolicyNet(int numPolicies, int numFeatures) {
+    return std::make_unique<PolicyNet>(numPolicies, numFeatures);
+}
