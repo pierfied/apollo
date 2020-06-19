@@ -6,14 +6,16 @@
 #include <random>
 #include <unordered_map>
 #include <map>
+#include <chrono>
 
 #include "apollo/PolicyModel.h"
 
 class FCLayer {
 public:
     FCLayer(int inputSize, int outputSize) : inputSize(inputSize), outputSize(outputSize) {
-        std::default_random_engine generator;
-        std::normal_distribution<double> distribution(0, 0.01);
+        std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
+        double bound = std::sqrt(6. / (inputSize + outputSize)) * 0.1;
+        std::uniform_real_distribution<double> distribution(-bound, bound);
 
         for (int i = 0; i < outputSize; ++i) {
             std::vector<double> row;
@@ -22,8 +24,13 @@ public:
             }
 
             weights.push_back(row);
+            weights_m.push_back(std::vector<double>(inputSize, 0));
+            weights_v.push_back(std::vector<double>(inputSize, 0));
             bias.push_back(distribution(generator));
         }
+
+        bias_m = std::vector<double>(outputSize, 0);
+        bias_v = std::vector<double>(outputSize, 0);
     };
 
     std::vector<std::vector<double>> forward(std::vector<std::vector<double>> &inputs) {
@@ -75,21 +82,40 @@ public:
         return inputGrad;
     }
 
-    void step(double learnRate){
+    void step(double learnRate, double beta1 = 0.5, double beta2 = 0.9, double epsilon = 1e-8) {
+        stepNum++;
+
         for (int i = 0; i < outputSize; ++i) {
             for (int j = 0; j < inputSize; ++j) {
-                weights[i][j] += learnRate * weight_grad[i][j];
+                weights_m[i][j] = beta1 * weights_m[i][j] + (1 - beta1) * weight_grad[i][j];
+                weights_v[i][j] = beta2 * weights_v[i][j] + (1 - beta2) * std::pow(weight_grad[i][j], 2);
+
+                double mHat = weights_m[i][j] / (1 - std::pow(beta1, stepNum));
+                double vHat = weights_v[i][j] / (1 - std::pow(beta2, stepNum));
+
+                weights[i][j] += learnRate * mHat / (std::sqrt(vHat) + epsilon);
             }
 
-            bias[i] += learnRate * bias_grad[i];
+            bias_m[i] = beta1 * bias_m[i] + (1 - beta1) * bias_grad[i];
+            bias_v[i] = beta2 * bias_v[i] + (1 - beta2) * std::pow(bias_grad[i], 2);
+
+            double mHat = bias_m[i] / (1 - std::pow(beta1, stepNum));
+            double vHat = bias_v[i] / (1 - std::pow(beta2, stepNum));
+
+            bias[i] += learnRate * mHat / (std::sqrt(vHat) + epsilon);
         }
     }
 
 private:
     int inputSize;
     int outputSize;
+    long stepNum = 0;
     std::vector<std::vector<double>> weights;
+    std::vector<std::vector<double>> weights_m;
+    std::vector<std::vector<double>> weights_v;
     std::vector<double> bias;
+    std::vector<double> bias_m;
+    std::vector<double> bias_v;
     std::vector<std::vector<double>> weight_grad;
     std::vector<double> bias_grad;
 };
@@ -190,10 +216,10 @@ class Net {
 public:
     Net(int inputSize, int hiddenSize, int outputSize, double learnRate=1e-1)
             : inputSize(inputSize), hiddenSize(hiddenSize), outputSize(outputSize), learnRate(learnRate),
-              layer1(FCLayer(inputSize, hiddenSize)), layer2(FCLayer(hiddenSize, outputSize)),
+              layer1(FCLayer(inputSize, hiddenSize)), layer2(FCLayer(hiddenSize, hiddenSize)),
               layer3(FCLayer(hiddenSize, outputSize)) {}
 
-    std::vector<std::vector<double>> forward(std::vector<std::vector<double>> &input){
+    std::vector<std::vector<double>> forward(std::vector<std::vector<double>> &input) {
         auto out = layer1.forward(input);
         out = relu.forward(out);
         out = layer2.forward(out);
@@ -204,7 +230,7 @@ public:
         return out;
     }
 
-    void trainStep(std::vector<std::vector<double>> &state, std::vector<int> &action, std::vector<double> &reward){
+    void trainStep(std::vector<std::vector<double>> &state, std::vector<int> &action, std::vector<double> &reward) {
         auto out1 = layer1.forward(state);
         auto aout1 = relu.forward(out1);
         auto out2 = layer2.forward(aout1);

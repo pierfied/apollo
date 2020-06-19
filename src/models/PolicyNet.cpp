@@ -38,6 +38,7 @@ PolicyNet::PolicyNet(int numPolicies, int numFeatures) : PolicyModel(numPolicies
                                                          numPolicies(numPolicies),
                                                          net(numFeatures, (numFeatures + numPolicies) / 2,
                                                              numPolicies) {
+    gen.seed(std::chrono::system_clock::now().time_since_epoch().count());
 }
 
 PolicyNet::~PolicyNet() {
@@ -45,7 +46,6 @@ PolicyNet::~PolicyNet() {
 
 void
 PolicyNet::trainNet(std::vector<std::vector<float>> &states, std::vector<int> &actions, std::vector<double> &rewards) {
-//    return;
     std::vector<std::vector<double>> double_states;
     for (auto &state: states) {
         std::vector<double> double_state;
