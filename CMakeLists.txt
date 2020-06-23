@@ -35,11 +35,53 @@
 # Apollo
 #
 
-project(APOLLO LANGUAGES CXX C)
+project(APOLLO LANGUAGES CXX C CUDA)
 cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_CXX_STANDARD 14)
 
+set(BLT_CXX_STD "c++14" CACHE STRING "Set the c++ standard to use")
+
+if (DEFINED BLT_SOURCE_DIR)
+    # Support having a shared BLT outside of the repository if given a BLT_SOURCE_DIR
+
+    if (NOT EXISTS ${BLT_SOURCE_DIR}/SetupBLT.cmake)
+        message(FATAL_ERROR "Given BLT_SOURCE_DIR does not contain SetupBLT.cmake")
+    endif()
+else()
+    message(FATAL_ERROR "BLT_SOURCE_DIR not defined")
+endif()
+
+include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
+
+include_directories(/home/pierfied/Documents/LLNL/opt/adept-utils/include)
+include_directories(/usr/lib/x86_64-linux-gnu/openmpi/include/)
+
+if (UMPIRE_DIR)
+    set(umpire_DIR ${UMPIRE_DIR})
+    list(APPEND CMAKE_PREFIX_PATH ${umpire_DIR})
+    find_package(camp REQUIRED)
+    find_package(umpire REQUIRED)
+
+    set (UMPIRE_FOUND ${umpire_FOUND} CACHE STRING "")
+    set (UMPIRE_LIBRARY umpire)
+
+    if (UMPIRE_FOUND)
+        set(UMPIRE_DEPENDS )
+        blt_list_append(TO UMPIRE_DEPENDS ELEMENTS cuda IF ${ENABLE_CUDA})
+        blt_list_append(TO UMPIRE_DEPENDS ELEMENTS mpi IF ${ENABLE_MPI})
+
+        blt_register_library( NAME      umpire
+                TREAT_INCLUDES_AS_SYSTEM ON
+                INCLUDES   ${UMPIRE_INCLUDE_DIRS}
+                LIBRARIES  ${UMPIRE_LIBRARY}
+                DEPENDS_ON ${UMPIRE_DEPENDS})
+    else()
+        message(FATAL_ERROR "Unable to find Umpire with given path: ${UMPIRE_DIR}")
+    endif()
+else()
+    message(FATAL_ERROR "Umpire is required! Please set UMPIRE_DIR to a valid install of Umpire.")
+endif()
 
 #####
 #
@@ -59,7 +101,7 @@ set(APOLLO_MINOR_VERSION 0)
 set(APOLLO_PATCH_VERSION 0)
 set(APOLLO_VERSION "${APOLLO_MAJOR_VERSION}.${APOLLO_MINOR_VERSION}.${APOLLO_PATCH_VERSION}")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -fPIC -O3")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}     -Wno-unused-variable -fPIC")
 
 set(APOLLO_BUILD_TYPE "${CMAKE_BUILD_TYPE}")

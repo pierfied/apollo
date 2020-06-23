@@ -73,7 +73,13 @@ set(APOLLO_SOURCES
     models/PolicyNet.cpp
     )
 
-add_library(apollo SHARED ${APOLLO_SOURCES})
+#add_library(apollo SHARED ${APOLLO_SOURCES})
+
+blt_add_library(NAME apollo
+                HEADERS ${APOLLO_HEADERS}
+                SOURCES ${APOLLO_SOURCES}
+                DEPENDS_ON umpire
+                SHARED TRUE)
 
 target_link_libraries(apollo PRIVATE dl ${OpenCV_LIBS})
 
