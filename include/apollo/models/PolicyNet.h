@@ -144,7 +144,7 @@ public:
         double *outputs = new double[batchSize * outputSize];
 
         for (int i = 0; i < batchSize; ++i) {
-            alpha[i] = inputs[i * batchSize];
+            alpha[i] = inputs[i * outputSize];
             for (int j = 0; j < outputSize; ++j) {
                 alpha[i] = std::max(alpha[i], inputs[i * outputSize + j]);
             }
