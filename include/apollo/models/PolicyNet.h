@@ -17,65 +17,56 @@ public:
         double bound = std::sqrt(6. / (inputSize + outputSize)) * 0.1;
         std::uniform_real_distribution<double> distribution(-bound, bound);
 
+        weights = new double[outputSize * inputSize]();
+        weights_m = new double[outputSize * inputSize]();
+        weights_v = new double[outputSize * inputSize]();
+        weights_grad = new double[outputSize * inputSize]();
+
+        bias = new double[outputSize]();
+        bias_m = new double[outputSize]();
+        bias_v = new double[outputSize]();
+        bias_grad = new double[outputSize]();
+
         for (int i = 0; i < outputSize; ++i) {
-            std::vector<double> row;
             for (int j = 0; j < inputSize; ++j) {
-                row.push_back(distribution(generator));
+                weights[i * inputSize + j] = distribution(generator);
             }
 
-            weights.push_back(row);
-            weights_m.push_back(std::vector<double>(inputSize, 0));
-            weights_v.push_back(std::vector<double>(inputSize, 0));
-            bias.push_back(distribution(generator));
+            bias[i] = distribution(generator);
         }
-
-        bias_m = std::vector<double>(outputSize, 0);
-        bias_v = std::vector<double>(outputSize, 0);
     };
 
-    std::vector<std::vector<double>> forward(std::vector<std::vector<double>> &inputs) {
-        int batchSize = inputs.size();
-
-        std::vector<std::vector<double>> outputs;
-        for (int i = 0; i < batchSize; ++i) {
-            outputs.push_back(std::vector<double>(outputSize, 0));
-        }
+    double *forward(double *inputs, int batchSize) {
+        double *outputs = new double[batchSize * outputSize]();
 
         for (int i = 0; i < batchSize; ++i) {
             for (int j = 0; j < outputSize; ++j) {
                 for (int k = 0; k < inputSize; ++k) {
-                    outputs[i][j] += weights[j][k] * inputs[i][k];
+                    outputs[i * outputSize + j] += weights[j * inputSize + k] * inputs[i * inputSize + k];
                 }
 
-                outputs[i][j] += bias[j];
+                outputs[i * outputSize + j] += bias[j];
             }
         }
 
         return outputs;
     }
 
-    std::vector<std::vector<double>>
-    backward(std::vector<std::vector<double>> &inputs, std::vector<std::vector<double>> &chainRuleGrad) {
-        int batchSize = inputs.size();
+    double *backward(double *inputs, double *chainRuleGrad, int batchSize) {
+        double *inputGrad = new double[batchSize * inputSize]();
 
-        weight_grad = std::vector<std::vector<double>>();
-        bias_grad = std::vector<double>(outputSize, 0);
-        for (int i = 0; i < outputSize; ++i) {
-            weight_grad.push_back(std::vector<double>(inputSize, 0));
+        for (int i = 0; i < outputSize * inputSize; ++i) {
+            weights_grad[i] = 0;
         }
 
-        std::vector<std::vector<double>> inputGrad;
-
         for (int i = 0; i < batchSize; ++i) {
-            inputGrad.push_back(std::vector<double>(inputSize, 0));
-
             for (int j = 0; j < outputSize; ++j) {
                 for (int k = 0; k < inputSize; ++k) {
-                    weight_grad[j][k] += chainRuleGrad[i][j] * inputs[i][k];
-                    inputGrad[i][k] += chainRuleGrad[i][j] * weights[j][k];
+                    weights_grad[j * inputSize + k] += chainRuleGrad[i * outputSize + j] * inputs[i * inputSize + k];
+                    inputGrad[i * inputSize + k] += chainRuleGrad[i * outputSize + j] * weights[j * inputSize + k];
                 }
 
-                bias_grad[j] += chainRuleGrad[i][j];
+                bias_grad[j] += chainRuleGrad[i * outputSize + j];
             }
         }
 
@@ -87,13 +78,15 @@ public:
 
         for (int i = 0; i < outputSize; ++i) {
             for (int j = 0; j < inputSize; ++j) {
-                weights_m[i][j] = beta1 * weights_m[i][j] + (1 - beta1) * weight_grad[i][j];
-                weights_v[i][j] = beta2 * weights_v[i][j] + (1 - beta2) * std::pow(weight_grad[i][j], 2);
+                int index = i * inputSize + j;
 
-                double mHat = weights_m[i][j] / (1 - std::pow(beta1, stepNum));
-                double vHat = weights_v[i][j] / (1 - std::pow(beta2, stepNum));
+                weights_m[index] = beta1 * weights_m[index] + (1 - beta1) * weights_grad[index];
+                weights_v[index] = beta2 * weights_v[index] + (1 - beta2) * std::pow(weights_grad[index], 2);
 
-                weights[i][j] += learnRate * mHat / (std::sqrt(vHat) + epsilon);
+                double mHat = weights_m[index] / (1 - std::pow(beta1, stepNum));
+                double vHat = weights_v[index] / (1 - std::pow(beta2, stepNum));
+
+                weights[index] += learnRate * mHat / (std::sqrt(vHat) + epsilon);
             }
 
             bias_m[i] = beta1 * bias_m[i] + (1 - beta1) * bias_grad[i];
@@ -110,49 +103,34 @@ private:
     int inputSize;
     int outputSize;
     long stepNum = 0;
-    std::vector<std::vector<double>> weights;
-    std::vector<std::vector<double>> weights_m;
-    std::vector<std::vector<double>> weights_v;
-    std::vector<double> bias;
-    std::vector<double> bias_m;
-    std::vector<double> bias_v;
-    std::vector<std::vector<double>> weight_grad;
-    std::vector<double> bias_grad;
+
+    double *weights;
+    double *weights_m;
+    double *weights_v;
+    double *weights_grad;
+    double *bias;
+    double *bias_m;
+    double *bias_v;
+    double *bias_grad;
 };
 
 class Relu {
 public:
-    std::vector<std::vector<double>> forward(std::vector<std::vector<double>> &inputs) {
-        int batchSize = inputs.size();
-        int outputSize = inputs[0].size();
+    double *forward(double *inputs, int batchSize, int outputSize) {
+        double *outputs = new double[batchSize * outputSize];
 
-        std::vector<std::vector<double>> outputs;
-
-        for (int i = 0; i < batchSize; ++i) {
-            auto output = std::vector<double>(outputSize);
-            for (int j = 0; j < outputSize; ++j) {
-                output[j] = std::max(inputs[i][j], 0.);
-            }
-
-            outputs.push_back(output);
+        for (int i = 0; i < batchSize * outputSize; ++i) {
+            outputs[i] = std::max(inputs[i], 0.);
         }
 
         return outputs;
     }
 
-    std::vector<std::vector<double>>
-    backward(std::vector<std::vector<double>> &inputs, std::vector<std::vector<double>> &chainRuleGrad) {
-        int batchSize = inputs.size();
-        int inputSize = inputs[0].size();
+    double *backward(double *inputs, double *chainRuleGrad, int batchSize, int inputSize) {
+        double *inputGrad = new double[batchSize * inputSize];
 
-        std::vector<std::vector<double>> inputGrad;
-
-        for (int i = 0; i < batchSize; ++i) {
-            inputGrad.push_back(std::vector<double>(inputSize, 0));
-
-            for (int j = 0; j < inputSize; ++j) {
-                inputGrad[i][j] = chainRuleGrad[i][j] * std::signbit(-inputs[i][j]);
-            }
+        for (int i = 0; i < batchSize * inputSize; ++i) {
+            inputGrad[i] = chainRuleGrad[i] * std::signbit(-inputs[i]);
         }
 
         return inputGrad;
@@ -161,51 +139,41 @@ public:
 
 class Softmax {
 public:
-    std::vector<std::vector<double>> forward(std::vector<std::vector<double>> &inputs) {
-        int batchSize = inputs.size();
-        int outputSize = inputs[0].size();
-
-        std::vector<double> alpha(batchSize, 0);
-        std::vector<std::vector<double>> outputs;
+    double *forward(double *inputs, int batchSize, int outputSize) {
+        double alpha[batchSize];
+        double *outputs = new double[batchSize * outputSize];
 
         for (int i = 0; i < batchSize; ++i) {
-            outputs.push_back(std::vector<double>(outputSize, 0));
-        }
-
-        for (int i = 0; i < batchSize; ++i) {
-            alpha[i] = inputs[i][0];
+            alpha[i] = inputs[i * batchSize];
             for (int j = 0; j < outputSize; ++j) {
-                alpha[i] = std::max(alpha[i], inputs[i][j]);
+                alpha[i] = std::max(alpha[i], inputs[i * outputSize + j]);
             }
         }
 
         for (int i = 0; i < batchSize; ++i) {
             double sum = 0;
             for (int j = 0; j < outputSize; ++j) {
-                outputs[i][j] = std::exp(inputs[i][j] - alpha[i]);
-                sum += outputs[i][j];
+                int index = i * outputSize + j;
+                outputs[index] = std::exp(inputs[index] - alpha[i]);
+                sum += outputs[index];
             }
             for (int j = 0; j < outputSize; ++j) {
-                outputs[i][j] /= sum;
+                outputs[i * outputSize + j] /= sum;
             }
         }
 
         return outputs;
     }
 
-    std::vector<std::vector<double>> lossGrad(std::vector<std::vector<double>> &input, std::vector<int> &action,
-                                              std::vector<std::vector<double>> &actionProbs,
-                                              std::vector<double> &reward) {
-        int batchSize = input.size();
-        int inputSize = input[0].size();
+    double *lossGrad(int *action, double *actionProbs, double *reward, int batchSize, int inputSize) {
+        double *inputGrad = new double[batchSize * inputSize];
 
-        std::vector<std::vector<double>> inputGrad;
         for (int i = 0; i < batchSize; ++i) {
-            inputGrad.push_back(std::vector<double>(inputSize, 0));
             for (int j = 0; j < inputSize; ++j) {
-                inputGrad[i][j] = -reward[i] * actionProbs[i][j] / batchSize;
+                int index = i * inputSize + j;
+                inputGrad[index] = -reward[i] * actionProbs[index] / batchSize;
             }
-            inputGrad[i][action[i]] += reward[i] / batchSize;
+            inputGrad[i * inputSize + action[i]] += reward[i] / batchSize;
         }
 
         return inputGrad;
@@ -214,41 +182,60 @@ public:
 
 class Net {
 public:
-    Net(int inputSize, int hiddenSize, int outputSize, double learnRate=1e-1)
+    Net(int inputSize, int hiddenSize, int outputSize, double learnRate = 1e-1)
             : inputSize(inputSize), hiddenSize(hiddenSize), outputSize(outputSize), learnRate(learnRate),
               layer1(FCLayer(inputSize, hiddenSize)), layer2(FCLayer(hiddenSize, hiddenSize)),
               layer3(FCLayer(hiddenSize, outputSize)) {}
 
-    std::vector<std::vector<double>> forward(std::vector<std::vector<double>> &input) {
-        auto out = layer1.forward(input);
-        out = relu.forward(out);
-        out = layer2.forward(out);
-        out = relu.forward(out);
-        out = layer3.forward(out);
-        out = softmax.forward(out);
+    double *forward(double *state, int batchSize) {
+        auto out1 = layer1.forward(state, batchSize);
+        auto aout1 = relu.forward(out1, batchSize, hiddenSize);
+        auto out2 = layer2.forward(aout1, batchSize);
+        auto aout2 = relu.forward(out2, batchSize, hiddenSize);
+        auto out3 = layer3.forward(aout2, batchSize);
+        auto aout3 = softmax.forward(out3, batchSize, outputSize);
 
-        return out;
+        delete out1;
+        delete aout1;
+        delete out2;
+        delete aout2;
+        delete out3;
+
+        return aout3;
     }
 
-    void trainStep(std::vector<std::vector<double>> &state, std::vector<int> &action, std::vector<double> &reward) {
-        auto out1 = layer1.forward(state);
-        auto aout1 = relu.forward(out1);
-        auto out2 = layer2.forward(aout1);
-        auto aout2 = relu.forward(out2);
-        auto out3 = layer3.forward(aout2);
-        auto aout3 = softmax.forward(out3);
+    void trainStep(double *state, int *action, double *reward, int batchSize) {
+        auto out1 = layer1.forward(state, batchSize);
+        auto aout1 = relu.forward(out1, batchSize, hiddenSize);
+        auto out2 = layer2.forward(aout1, batchSize);
+        auto aout2 = relu.forward(out2, batchSize, hiddenSize);
+        auto out3 = layer3.forward(aout2, batchSize);
+        auto aout3 = softmax.forward(out3, batchSize, outputSize);
 
-        auto aout3_grad = softmax.lossGrad(out3, action, aout3, reward);
-        auto out3_grad = layer3.backward(aout2, aout3_grad);
-        auto aout2_grad = relu.backward(out2, out3_grad);
+        auto aout3_grad = softmax.lossGrad(action, aout3, reward, batchSize, outputSize);
+        auto out3_grad = layer3.backward(aout2, aout3_grad, batchSize);
+        auto aout2_grad = relu.backward(out2, out3_grad, batchSize, hiddenSize);
 //        auto aout2_grad = softmax.lossGrad(out2, action, aout2, reward);
-        auto out2_grad = layer2.backward(aout1, aout2_grad);
-        auto aout1_grad = relu.backward(out1, out2_grad);
-        layer1.backward(state, aout1_grad);
+        auto out2_grad = layer2.backward(aout1, aout2_grad, batchSize);
+        auto aout1_grad = relu.backward(out1, out2_grad, batchSize, hiddenSize);
+        layer1.backward(state, aout1_grad, batchSize);
 
         layer1.step(learnRate);
         layer2.step(learnRate);
         layer3.step(learnRate);
+
+        delete out1;
+        delete aout1;
+        delete out2;
+        delete aout2;
+        delete out3;
+        delete aout3;
+
+        delete aout3_grad;
+        delete out3_grad;
+        delete aout2_grad;
+        delete out2_grad;
+        delete aout1_grad;
     }
 
 private:

@@ -46,16 +46,26 @@ PolicyNet::~PolicyNet() {
 
 void
 PolicyNet::trainNet(std::vector<std::vector<float>> &states, std::vector<int> &actions, std::vector<double> &rewards) {
-    std::vector<std::vector<double>> double_states;
-    for (auto &state: states) {
-        std::vector<double> double_state;
-        for (auto &s: state) {
-            double_state.push_back(std::log(s));
+    int batchSize = states.size();
+    int inputSize = states[0].size();
+
+    double *trainStates = new double[batchSize * inputSize];
+    int *trainActions = new int[batchSize];
+    double *trainRewards = new double[batchSize];
+
+    for (int i = 0; i < batchSize; ++i) {
+        for (int j = 0; j < inputSize; ++j) {
+            trainStates[i * inputSize + j] = std::log(states[i][j]);
         }
-        double_states.push_back(double_state);
+        trainActions[i] = actions[i];
+        trainRewards[i] = rewards[i];
     }
 
-    net.trainStep(double_states, actions, rewards);
+    net.trainStep(trainStates, trainActions, trainRewards, batchSize);
+
+    delete trainStates;
+    delete trainActions;
+    delete trainRewards;
 }
 
 int PolicyNet::getIndex(std::vector<float> &state) {
@@ -64,12 +74,20 @@ int PolicyNet::getIndex(std::vector<float> &state) {
     if (it != cache2.end()) {
         actionProbs = it->second;
     } else {
-        std::vector<double> double_state;
-        for (auto &s: state) {
-            double_state.push_back(std::log(s));
+        int inputSize = state.size();
+        double *evalState = new double[inputSize];
+        for (int i = 0; i < inputSize; ++i) {
+            evalState[i] = std::log(state[i]);
         }
-        std::vector<std::vector<double>> state_vec = {double_state};
-        actionProbs = net.forward(state_vec)[0];
+
+        double *evalActionProbs = net.forward(evalState, 1);
+        actionProbs = std::vector<double>(numPolicies);
+        for (int i = 0; i < numPolicies; ++i) {
+            actionProbs[i] = evalActionProbs[i];
+        }
+
+        delete evalState;
+        delete evalActionProbs;
 
         cache2.insert(std::make_pair(state[0], actionProbs));
 
