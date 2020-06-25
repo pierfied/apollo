@@ -87,7 +87,7 @@ int PolicyNet::getIndex(std::vector<float> &state) {
         }
 
         delete evalState;
-        delete evalActionProbs;
+//        delete evalActionProbs;
 
         cache2.insert(std::make_pair(state[0], actionProbs));
 

@@ -37,7 +37,21 @@ public:
     };
 
     double *forward(double *inputs, int batchSize) {
-        double *outputs = new double[batchSize * outputSize]();
+        if (batchSize > maxBatchSize){
+            if (outputs != NULL) {
+                delete outputs;
+                delete inputGrad;
+            }
+
+            outputs = new double[batchSize * outputSize]();
+            inputGrad = new double[batchSize * inputSize];
+
+            maxBatchSize = batchSize;
+        }else{
+            for (int i = 0; i < batchSize * outputSize; ++i) {
+                outputs[i] = 0;
+            }
+        }
 
         for (int i = 0; i < batchSize; ++i) {
             for (int j = 0; j < outputSize; ++j) {
@@ -53,7 +67,9 @@ public:
     }
 
     double *backward(double *inputs, double *chainRuleGrad, int batchSize) {
-        double *inputGrad = new double[batchSize * inputSize]();
+        for (int i = 0; i < batchSize * inputSize; ++i) {
+            inputGrad[i] = 0;
+        }
 
         for (int i = 0; i < outputSize * inputSize; ++i) {
             weights_grad[i] = 0;
@@ -112,12 +128,26 @@ private:
     double *bias_m;
     double *bias_v;
     double *bias_grad;
+
+    double *outputs = NULL;
+    double *inputGrad;
+    int maxBatchSize = 0;
 };
 
 class Relu {
 public:
     double *forward(double *inputs, int batchSize, int outputSize) {
-        double *outputs = new double[batchSize * outputSize];
+        if (batchSize * outputSize > maxArraySize){
+            maxArraySize = batchSize * outputSize;
+
+            if (outputs != NULL) {
+                delete outputs;
+                delete inputGrad;
+            }
+
+            outputs = new double[maxArraySize];
+            inputGrad = new double[maxArraySize];
+        }
 
         for (int i = 0; i < batchSize * outputSize; ++i) {
             outputs[i] = std::max(inputs[i], 0.);
@@ -127,21 +157,35 @@ public:
     }
 
     double *backward(double *inputs, double *chainRuleGrad, int batchSize, int inputSize) {
-        double *inputGrad = new double[batchSize * inputSize];
-
         for (int i = 0; i < batchSize * inputSize; ++i) {
             inputGrad[i] = chainRuleGrad[i] * std::signbit(-inputs[i]);
         }
 
         return inputGrad;
     }
+
+private:
+    double *outputs = NULL;
+    double *inputGrad;
+    int maxArraySize = 0;
 };
 
 class Softmax {
 public:
     double *forward(double *inputs, int batchSize, int outputSize) {
+        if (batchSize * outputSize > maxArraySize){
+            maxArraySize = batchSize * outputSize;
+
+            if (outputs != NULL) {
+                delete outputs;
+                delete inputGrad;
+            }
+
+            outputs = new double[maxArraySize];
+            inputGrad = new double[maxArraySize];
+        }
+
         double alpha[batchSize];
-        double *outputs = new double[batchSize * outputSize];
 
         for (int i = 0; i < batchSize; ++i) {
             alpha[i] = inputs[i * outputSize];
@@ -166,8 +210,6 @@ public:
     }
 
     double *lossGrad(int *action, double *actionProbs, double *reward, int batchSize, int inputSize) {
-        double *inputGrad = new double[batchSize * inputSize];
-
         for (int i = 0; i < batchSize; ++i) {
             for (int j = 0; j < inputSize; ++j) {
                 int index = i * inputSize + j;
@@ -178,6 +220,11 @@ public:
 
         return inputGrad;
     }
+
+private:
+    double *outputs = NULL;
+    double *inputGrad;
+    int maxArraySize = 0;
 };
 
 class Net {
@@ -194,12 +241,6 @@ public:
         auto aout2 = relu.forward(out2, batchSize, hiddenSize);
         auto out3 = layer3.forward(aout2, batchSize);
         auto aout3 = softmax.forward(out3, batchSize, outputSize);
-
-        delete out1;
-        delete aout1;
-        delete out2;
-        delete aout2;
-        delete out3;
 
         return aout3;
     }
@@ -223,19 +264,6 @@ public:
         layer1.step(learnRate);
         layer2.step(learnRate);
         layer3.step(learnRate);
-
-        delete out1;
-        delete aout1;
-        delete out2;
-        delete aout2;
-        delete out3;
-        delete aout3;
-
-        delete aout3_grad;
-        delete out3_grad;
-        delete aout2_grad;
-        delete out2_grad;
-        delete aout1_grad;
     }
 
 private:
