@@ -240,9 +240,9 @@ public:
 
     double *forward(double *state, int batchSize) {
         auto out1 = layer1.forward(state, batchSize);
-        auto aout1 = relu.forward(out1, batchSize, hiddenSize);
+        auto aout1 = relu1.forward(out1, batchSize, hiddenSize);
         auto out2 = layer2.forward(aout1, batchSize);
-        auto aout2 = relu.forward(out2, batchSize, hiddenSize);
+        auto aout2 = relu2.forward(out2, batchSize, hiddenSize);
         auto out3 = layer3.forward(aout2, batchSize);
         auto aout3 = softmax.forward(out3, batchSize, outputSize);
 
