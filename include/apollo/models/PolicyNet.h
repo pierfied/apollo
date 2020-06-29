@@ -75,6 +75,10 @@ public:
             weights_grad[i] = 0;
         }
 
+        for (int i = 0; i < outputSize; ++i) {
+            bias_grad[i] = 0;
+        }
+
         for (int i = 0; i < batchSize; ++i) {
             for (int j = 0; j < outputSize; ++j) {
                 for (int k = 0; k < inputSize; ++k) {
@@ -247,18 +251,18 @@ public:
 
     void trainStep(double *state, int *action, double *reward, int batchSize) {
         auto out1 = layer1.forward(state, batchSize);
-        auto aout1 = relu.forward(out1, batchSize, hiddenSize);
+        auto aout1 = relu1.forward(out1, batchSize, hiddenSize);
         auto out2 = layer2.forward(aout1, batchSize);
-        auto aout2 = relu.forward(out2, batchSize, hiddenSize);
+        auto aout2 = relu2.forward(out2, batchSize, hiddenSize);
         auto out3 = layer3.forward(aout2, batchSize);
         auto aout3 = softmax.forward(out3, batchSize, outputSize);
 
         auto aout3_grad = softmax.lossGrad(action, aout3, reward, batchSize, outputSize);
         auto out3_grad = layer3.backward(aout2, aout3_grad, batchSize);
-        auto aout2_grad = relu.backward(out2, out3_grad, batchSize, hiddenSize);
+        auto aout2_grad = relu2.backward(out2, out3_grad, batchSize, hiddenSize);
 //        auto aout2_grad = softmax.lossGrad(out2, action, aout2, reward);
         auto out2_grad = layer2.backward(aout1, aout2_grad, batchSize);
-        auto aout1_grad = relu.backward(out1, out2_grad, batchSize, hiddenSize);
+        auto aout1_grad = relu1.backward(out1, out2_grad, batchSize, hiddenSize);
         layer1.backward(state, aout1_grad, batchSize);
 
         layer1.step(learnRate);
@@ -274,7 +278,8 @@ private:
     FCLayer layer1;
     FCLayer layer2;
     FCLayer layer3;
-    Relu relu;
+    Relu relu1;
+    Relu relu2;
     Softmax softmax;
 };
 

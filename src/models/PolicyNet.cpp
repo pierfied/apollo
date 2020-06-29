@@ -47,6 +47,7 @@ PolicyNet::~PolicyNet() {
 void
 PolicyNet::trainNet(std::vector<std::vector<float>> &states, std::vector<int> &actions, std::vector<double> &rewards) {
     int batchSize = states.size();
+    if (batchSize < 1) return; // Don't train if there is no data to train on.
     int inputSize = states[0].size();
 
     double *trainStates = new double[batchSize * inputSize];
