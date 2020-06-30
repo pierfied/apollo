@@ -626,6 +626,35 @@ Apollo::flushAllRegionMeasurements(int step)
 {
     int rank = mpiRank;  //Automatically 0 if not an MPI environment.
 
+    if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("PolicyNet") != std::string::npos){
+        for( auto &it : regions ) {
+            Region *reg = it.second;
+
+            std::vector<std::vector<float>> states;
+            std::vector<int> actions;
+            std::vector<double> rewards;
+
+            for (auto &measure: reg->trainMeasures) {
+                auto state = std::get<0>(measure);
+                auto policy = std::get<1>(measure);
+                auto duration = std::get<2>(measure);
+
+                states.push_back(state);
+                actions.push_back(policy);
+                rewards.push_back(-duration);
+            }
+
+            PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());
+
+            model->trainNet(states, actions, rewards);
+
+            reg->trainMeasures.clear();
+            model->cache2.clear();
+        }
+
+        return;
+    }
+
     // Reduce local region measurements to best policies
     // NOTE[chad]: reg->reduceBestPolicies() will guard any MPI collectives
     //             internally, and skip them if MPI is disabled.
