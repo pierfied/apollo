@@ -292,10 +292,10 @@ private:
 
 class Net {
 public:
-    Net(int inputSize, int hiddenSize, int outputSize, double learnRate = 1e-2)
+    Net(int inputSize, int hiddenSize, int outputSize, double learnRate = 1e-2, double beta1 = 0.5, double beta2 = 0.9)
             : inputSize(inputSize), hiddenSize(hiddenSize), outputSize(outputSize), learnRate(learnRate),
-              layer1(FCLayer(inputSize, hiddenSize)), layer2(FCLayer(hiddenSize, hiddenSize)),
-              layer3(FCLayer(hiddenSize, outputSize)) {}
+              beta1(beta1), beta2(beta2), layer1(FCLayer(inputSize, hiddenSize)),
+              layer2(FCLayer(hiddenSize, hiddenSize)), layer3(FCLayer(hiddenSize, outputSize)) {}
 
     double *forward(double *state, int batchSize) {
         // Compute the forward pass through each layer of the network.
@@ -327,9 +327,9 @@ public:
         layer1.backward(state, aout1_grad, batchSize);
 
         // Update the parameters of each layer.
-        layer1.step(learnRate);
-        layer2.step(learnRate);
-        layer3.step(learnRate);
+        layer1.step(learnRate, beta1, beta2);
+        layer2.step(learnRate, beta1, beta2);
+        layer3.step(learnRate, beta1, beta2);
     }
 
 private:
@@ -337,6 +337,8 @@ private:
     int hiddenSize;
     int outputSize;
     double learnRate;
+    double beta1;
+    double beta2;
     FCLayer layer1;
     FCLayer layer2;
     FCLayer layer3;
@@ -347,7 +349,8 @@ private:
 
 class PolicyNet : public PolicyModel {
 public:
-    PolicyNet(int num_policies, int num_features, double beta);
+    PolicyNet(int num_policies, int num_features, double lr, double beta, double beta1, double beta2,
+            double featureScaling);
 
     ~PolicyNet();
 
@@ -365,6 +368,7 @@ private:
     std::mt19937_64 gen;
     double rewardMovingAvg;
     double beta;
+    double featureScaling;
 }; //end: PolicyNet (class)
 
 

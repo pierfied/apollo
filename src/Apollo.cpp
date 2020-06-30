@@ -857,7 +857,6 @@ Apollo::flushAllRegionMeasurements(int step)
 void
 Apollo::clearTrainRegionMeasurements()
 {
-    std::stringstream granular_measures_string;
     for( auto &it: regions ) {
         Region *reg = it.second;
 

@@ -38,6 +38,7 @@
 #include <chrono>
 #include <memory>
 #include <utility>
+#include <cmath>
 
 #include "assert.h"
 
@@ -145,7 +146,36 @@ Apollo::Region::Region(
         //std::cout << "Model RoundRobin" << std::endl;
     }
     else if("PolicyNet" == model_str){
-        model = ModelFactory::createPolicyNet(apollo->num_policies, 1);
+        double lr = 1e-2;
+        double beta = 0.5;
+        double beta1 = 0.5;
+        double beta2 = 0.9;
+        double featureScaling = std::log(64.);
+
+        while (pos != std::string::npos){
+            auto new_pos = Config::APOLLO_INIT_MODEL.find(",", pos+1);
+            std::string varString = Config::APOLLO_INIT_MODEL.substr(pos + 1, new_pos);
+
+            auto varPos = varString.find("=");
+            auto varName = varString.substr(0, varPos);
+            auto value = std::stod(varString.substr(varPos + 1));
+
+            if (varName == "lr"){
+                lr = value;
+            } else if (varName == "beta"){
+                beta = value;
+            } else if (varName == "beta1"){
+                beta1 = value;
+            } else if (varName == "beta2"){
+                beta2 = value;
+            } else if (varName == "scale"){
+                featureScaling = value;
+            }
+
+            pos = new_pos;
+        }
+
+        model = ModelFactory::createPolicyNet(apollo->num_policies, 1, lr, beta, beta1, beta2, featureScaling);
     }
     else {
         std::cerr << "Invalid model env var: " + Config::APOLLO_INIT_MODEL << std::endl;

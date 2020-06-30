@@ -21,7 +21,8 @@ class ModelFactory {
                 std::vector< std::vector<float> > &features,
                 std::vector<float> &responses );
 
-        static std::unique_ptr<PolicyModel> createPolicyNet(int numPolicies, int numFeatures);
+        static std::unique_ptr<PolicyModel> createPolicyNet(int numPolicies, int numFeatures, double lr, double beta,
+                double beta1, double beta2, double featureScaling);
 }; //end: ModelFactory
 
 

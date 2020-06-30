@@ -34,9 +34,11 @@
 #include <iostream>
 #include "apollo/models/PolicyNet.h"
 
-PolicyNet::PolicyNet(int numPolicies, int numFeatures, double beta = 0.5) :
+PolicyNet::PolicyNet(int numPolicies, int numFeatures, double lr = 1e-2, double beta = 0.5, double beta1 = 0.5,
+                     double beta2 = 0.9, double featureScaling = std::log(64.)) :
         PolicyModel(numPolicies, "PolicyNet", true), numPolicies(numPolicies),
-        net(numFeatures, (numFeatures + numPolicies) / 2, numPolicies), beta(beta) {
+        net(numFeatures, (numFeatures + numPolicies) / 2, numPolicies, lr, beta1, beta2),
+        beta(beta), featureScaling(featureScaling) {
     // Seed the random number generator using the current time.
     gen.seed(std::chrono::system_clock::now().time_since_epoch().count());
 }
@@ -68,7 +70,7 @@ PolicyNet::trainNet(std::vector<std::vector<float>> &states, std::vector<int> &a
     // Fill the arrays used for training.
     for (int i = 0; i < batchSize; ++i) {
         for (int j = 0; j < inputSize; ++j) {
-            trainStates[i * inputSize + j] = std::log(states[i][j]); // Use log to normalize the feature scales.
+            trainStates[i * inputSize + j] = std::log(states[i][j]) / featureScaling; // Use log to normalize the feature scales.
         }
         trainActions[i] = actions[i];
         trainRewards[i] = rewards[i] - rewardMovingAvg; // Subtract the moving average baseline to reduce variance.
@@ -96,7 +98,7 @@ int PolicyNet::getIndex(std::vector<float> &state) {
         int inputSize = state.size();
         double *evalState = new double[inputSize];
         for (int i = 0; i < inputSize; ++i) {
-            evalState[i] = std::log(state[i]); // Use log to normalize the feature scales.
+            evalState[i] = std::log(state[i]) / featureScaling; // Use log to normalize the feature scales.
         }
 
         // Compute the action probabilities using the network and store in a vector.
