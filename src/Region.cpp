@@ -154,7 +154,7 @@ Apollo::Region::Region(
         double beta = 0.5;
         double beta1 = 0.5;
         double beta2 = 0.9;
-        double featureScaling = std::log(64.);
+        double featureScaling = 64 * std::log(2.);
 
         while (pos != std::string::npos){
             auto new_pos = Config::APOLLO_INIT_MODEL.find(",", pos+1);

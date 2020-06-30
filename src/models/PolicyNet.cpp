@@ -35,7 +35,7 @@
 #include "apollo/models/PolicyNet.h"
 
 PolicyNet::PolicyNet(int numPolicies, int numFeatures, double lr = 1e-2, double beta = 0.5, double beta1 = 0.5,
-                     double beta2 = 0.9, double featureScaling = std::log(64.)) :
+                     double beta2 = 0.9, double featureScaling = 64 * std::log(2.)) :
         PolicyModel(numPolicies, "PolicyNet", true), numPolicies(numPolicies),
         net(numFeatures, (numFeatures + numPolicies) / 2, numPolicies, lr, beta1, beta2),
         beta(beta), featureScaling(featureScaling) {
