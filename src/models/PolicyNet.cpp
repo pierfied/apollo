@@ -37,6 +37,7 @@
 PolicyNet::PolicyNet(int numPolicies, int numFeatures, double beta = 0.5) :
         PolicyModel(numPolicies, "PolicyNet", true), numPolicies(numPolicies),
         net(numFeatures, (numFeatures + numPolicies) / 2, numPolicies), beta(beta) {
+    // Seed the random number generator using the current time.
     gen.seed(std::chrono::system_clock::now().time_since_epoch().count());
 }
 
@@ -49,28 +50,34 @@ PolicyNet::trainNet(std::vector<std::vector<float>> &states, std::vector<int> &a
     if (batchSize < 1) return; // Don't train if there is no data to train on.
     int inputSize = states[0].size();
 
+    // Create the arrays used for training.
     double *trainStates = new double[batchSize * inputSize];
     int *trainActions = new int[batchSize];
     double *trainRewards = new double[batchSize];
 
+    // Calculate the average reward of the batch.
     double batchRewardAvg = 0;
     for (int i = 0; i < batchSize; ++i) {
         batchRewardAvg += rewards[i];
     }
     batchRewardAvg /= batchSize;
 
+    // Update the moving average of the reward.
     rewardMovingAvg = beta * rewardMovingAvg + (1 - beta) * batchRewardAvg;
 
+    // Fill the arrays used for training.
     for (int i = 0; i < batchSize; ++i) {
         for (int j = 0; j < inputSize; ++j) {
-            trainStates[i * inputSize + j] = std::log(states[i][j]);
+            trainStates[i * inputSize + j] = std::log(states[i][j]); // Use log to normalize the feature scales.
         }
         trainActions[i] = actions[i];
-        trainRewards[i] = rewards[i] - rewardMovingAvg;
+        trainRewards[i] = rewards[i] - rewardMovingAvg; // Subtract the moving average baseline to reduce variance.
     }
 
+    // Train the network.
     net.trainStep(trainStates, trainActions, trainRewards, batchSize);
 
+    // Delete the arrays used for training.
     delete[] trainStates;
     delete[] trainActions;
     delete[] trainRewards;
@@ -78,25 +85,32 @@ PolicyNet::trainNet(std::vector<std::vector<float>> &states, std::vector<int> &a
 
 int PolicyNet::getIndex(std::vector<float> &state) {
     std::vector<double> actionProbs;
+
+    // Check if these features have already been evaluated since the previous network update.
     auto it = cache2.find(state[0]);
     if (it != cache2.end()) {
+        // Use the previously evaluated action probabilities.
         actionProbs = it->second;
     } else {
+        // Create the state array to be evaluated by the network.
         int inputSize = state.size();
         double *evalState = new double[inputSize];
         for (int i = 0; i < inputSize; ++i) {
-            evalState[i] = std::log(state[i]);
+            evalState[i] = std::log(state[i]); // Use log to normalize the feature scales.
         }
 
+        // Compute the action probabilities using the network and store in a vector.
         double *evalActionProbs = net.forward(evalState, 1);
         actionProbs = std::vector<double>(numPolicies);
         for (int i = 0; i < numPolicies; ++i) {
             actionProbs[i] = evalActionProbs[i];
         }
 
+        // Delete the state array.
         delete[] evalState;
 //        delete evalActionProbs;
 
+        // Add the action probabilities to the cache to be reused later.
         cache2.insert(std::make_pair(state[0], actionProbs));
 
 //        std::cout << " probs: ";
@@ -106,8 +120,8 @@ int PolicyNet::getIndex(std::vector<float> &state) {
 //        std::cout << std::endl;
     }
 
+    // Sample a policy from the action probabilities.
     std::discrete_distribution<> d(actionProbs.begin(), actionProbs.end());
-
     int policyIndex = d(gen);
 
     return policyIndex;

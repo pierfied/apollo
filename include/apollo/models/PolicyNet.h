@@ -13,10 +13,12 @@
 class FCLayer {
 public:
     FCLayer(int inputSize, int outputSize) : inputSize(inputSize), outputSize(outputSize) {
+        // Create the random number generator and the distribution for He initialization.
         std::mt19937_64 generator(std::chrono::system_clock::now().time_since_epoch().count());
         double stddev = std::sqrt(2 / inputSize);
         std::normal_distribution<double> distribution(0., stddev);
 
+        // Allocate and zero initialize the arrays needed for the parameters.
         weights = new double[outputSize * inputSize]();
         weights_m = new double[outputSize * inputSize]();
         weights_v = new double[outputSize * inputSize]();
@@ -27,6 +29,7 @@ public:
         bias_v = new double[outputSize]();
         bias_grad = new double[outputSize]();
 
+        // Randomly initializer the layer weights.
         for (int i = 0; i < outputSize; ++i) {
             for (int j = 0; j < inputSize; ++j) {
                 weights[i * inputSize + j] = distribution(generator);
@@ -36,7 +39,8 @@ public:
         }
     };
 
-    ~FCLayer(){
+    ~FCLayer() {
+        // Delete all allocated arrays.
         delete[] weights;
         delete[] weights_m;
         delete[] weights_v;
@@ -54,22 +58,27 @@ public:
     }
 
     double *forward(double *inputs, int batchSize) {
-        if (batchSize > maxBatchSize){
+        // Check if the current batch size is larger than the maximum so far.
+        if (batchSize > maxBatchSize) {
+            // Delete the old arrays if they exist.
             if (outputs != NULL) {
                 delete[] outputs;
                 delete[] inputGrad;
             }
 
+            // Allocate new arrays for the batch size.
             outputs = new double[batchSize * outputSize]();
             inputGrad = new double[batchSize * inputSize];
 
             maxBatchSize = batchSize;
-        }else{
+        } else {
+            // Zero the output array.
             for (int i = 0; i < batchSize * outputSize; ++i) {
                 outputs[i] = 0;
             }
         }
 
+        // Compute the forward pass of this layer: y = M x + b
         for (int i = 0; i < batchSize; ++i) {
             for (int j = 0; j < outputSize; ++j) {
                 for (int k = 0; k < inputSize; ++k) {
@@ -84,6 +93,7 @@ public:
     }
 
     double *backward(double *inputs, double *chainRuleGrad, int batchSize) {
+        // Zero all gradient arrays.
         for (int i = 0; i < batchSize * inputSize; ++i) {
             inputGrad[i] = 0;
         }
@@ -96,6 +106,7 @@ public:
             bias_grad[i] = 0;
         }
 
+        // Compute the gradients using the chain rule with the gradients from the previous layer.
         for (int i = 0; i < batchSize; ++i) {
             for (int j = 0; j < outputSize; ++j) {
                 for (int k = 0; k < inputSize; ++k) {
@@ -113,25 +124,32 @@ public:
     void step(double learnRate, double beta1 = 0.5, double beta2 = 0.9, double epsilon = 1e-8) {
         stepNum++;
 
+        // Update each parameter in the layer using Adam optimzation.
         for (int i = 0; i < outputSize; ++i) {
             for (int j = 0; j < inputSize; ++j) {
                 int index = i * inputSize + j;
 
+                // Update the moving averages of the first and second moments of the gradient.
                 weights_m[index] = beta1 * weights_m[index] + (1 - beta1) * weights_grad[index];
                 weights_v[index] = beta2 * weights_v[index] + (1 - beta2) * std::pow(weights_grad[index], 2);
 
+                // Compute the unbiased moving averages.
                 double mHat = weights_m[index] / (1 - std::pow(beta1, stepNum));
                 double vHat = weights_v[index] / (1 - std::pow(beta2, stepNum));
 
+                // Update the weights.
                 weights[index] += learnRate * mHat / (std::sqrt(vHat) + epsilon);
             }
 
+            // Update the moving averages of the first and second moments of the gradient.
             bias_m[i] = beta1 * bias_m[i] + (1 - beta1) * bias_grad[i];
             bias_v[i] = beta2 * bias_v[i] + (1 - beta2) * std::pow(bias_grad[i], 2);
 
+            // Compute the unbiased moving averages.
             double mHat = bias_m[i] / (1 - std::pow(beta1, stepNum));
             double vHat = bias_v[i] / (1 - std::pow(beta2, stepNum));
 
+            // Update the weights.
             bias[i] += learnRate * mHat / (std::sqrt(vHat) + epsilon);
         }
     }
@@ -157,7 +175,8 @@ private:
 
 class Relu {
 public:
-    ~Relu(){
+    ~Relu() {
+        // Delete allocated arrays.
         if (outputs != NULL) {
             delete[] outputs;
             delete[] inputGrad;
@@ -165,9 +184,11 @@ public:
     }
 
     double *forward(double *inputs, int batchSize, int outputSize) {
-        if (batchSize * outputSize > maxArraySize){
+        // Check if the arrays need to be reallocated.
+        if (batchSize * outputSize > maxArraySize) {
             maxArraySize = batchSize * outputSize;
 
+            // Delete old arrays if they exist.
             if (outputs != NULL) {
                 delete[] outputs;
                 delete[] inputGrad;
@@ -177,6 +198,7 @@ public:
             inputGrad = new double[maxArraySize];
         }
 
+        // Compute ReLU activation.
         for (int i = 0; i < batchSize * outputSize; ++i) {
             outputs[i] = std::max(inputs[i], 0.);
         }
@@ -185,6 +207,7 @@ public:
     }
 
     double *backward(double *inputs, double *chainRuleGrad, int batchSize, int inputSize) {
+        // Compute the gradients of the ReLU layer using the chain rule with the gradients from the previous layer.
         for (int i = 0; i < batchSize * inputSize; ++i) {
             inputGrad[i] = chainRuleGrad[i] * std::signbit(-inputs[i]);
         }
@@ -200,7 +223,8 @@ private:
 
 class Softmax {
 public:
-    ~Softmax(){
+    ~Softmax() {
+        // Delete allocated arrays.
         if (outputs != NULL) {
             delete[] outputs;
             delete[] inputGrad;
@@ -208,9 +232,11 @@ public:
     }
 
     double *forward(double *inputs, int batchSize, int outputSize) {
-        if (batchSize * outputSize > maxArraySize){
+        // Check if the arrays need to be reallocated.
+        if (batchSize * outputSize > maxArraySize) {
             maxArraySize = batchSize * outputSize;
 
+            // Delete old arrays if they exist.
             if (outputs != NULL) {
                 delete[] outputs;
                 delete[] inputGrad;
@@ -220,8 +246,8 @@ public:
             inputGrad = new double[maxArraySize];
         }
 
+        // Compute the maximum of each previous layer for each sample. This is used to improve numerical stability.
         double alpha[batchSize];
-
         for (int i = 0; i < batchSize; ++i) {
             alpha[i] = inputs[i * outputSize];
             for (int j = 0; j < outputSize; ++j) {
@@ -229,11 +255,12 @@ public:
             }
         }
 
+        // Calculate the probablities for each output using softmax.
         for (int i = 0; i < batchSize; ++i) {
             double sum = 0;
             for (int j = 0; j < outputSize; ++j) {
                 int index = i * outputSize + j;
-                outputs[index] = std::exp(inputs[index] - alpha[i]);
+                outputs[index] = std::exp(inputs[index] - alpha[i]); // Note: subtract alpha for numerical stability.
                 sum += outputs[index];
             }
             for (int j = 0; j < outputSize; ++j) {
@@ -245,6 +272,7 @@ public:
     }
 
     double *lossGrad(int *action, double *actionProbs, double *reward, int batchSize, int inputSize) {
+        // Compute the gradient of the softmax layer for the given state, action, and reward.
         for (int i = 0; i < batchSize; ++i) {
             for (int j = 0; j < inputSize; ++j) {
                 int index = i * inputSize + j;
@@ -264,12 +292,13 @@ private:
 
 class Net {
 public:
-    Net(int inputSize, int hiddenSize, int outputSize, double learnRate = 1e-1)
+    Net(int inputSize, int hiddenSize, int outputSize, double learnRate = 1e-2)
             : inputSize(inputSize), hiddenSize(hiddenSize), outputSize(outputSize), learnRate(learnRate),
               layer1(FCLayer(inputSize, hiddenSize)), layer2(FCLayer(hiddenSize, hiddenSize)),
               layer3(FCLayer(hiddenSize, outputSize)) {}
 
     double *forward(double *state, int batchSize) {
+        // Compute the forward pass through each layer of the network.
         auto out1 = layer1.forward(state, batchSize);
         auto aout1 = relu1.forward(out1, batchSize, hiddenSize);
         auto out2 = layer2.forward(aout1, batchSize);
@@ -281,6 +310,7 @@ public:
     }
 
     void trainStep(double *state, int *action, double *reward, int batchSize) {
+        // Compute the forward pass through each layer of the network.
         auto out1 = layer1.forward(state, batchSize);
         auto aout1 = relu1.forward(out1, batchSize, hiddenSize);
         auto out2 = layer2.forward(aout1, batchSize);
@@ -288,6 +318,7 @@ public:
         auto out3 = layer3.forward(aout2, batchSize);
         auto aout3 = softmax.forward(out3, batchSize, outputSize);
 
+        // Compute the backward pass through each layer and compute the gradients.
         auto aout3_grad = softmax.lossGrad(action, aout3, reward, batchSize, outputSize);
         auto out3_grad = layer3.backward(aout2, aout3_grad, batchSize);
         auto aout2_grad = relu2.backward(out2, out3_grad, batchSize, hiddenSize);
@@ -295,6 +326,7 @@ public:
         auto aout1_grad = relu1.backward(out1, out2_grad, batchSize, hiddenSize);
         layer1.backward(state, aout1_grad, batchSize);
 
+        // Update the parameters of each layer.
         layer1.step(learnRate);
         layer2.step(learnRate);
         layer3.step(learnRate);
