@@ -51,6 +51,10 @@
 #include <mpi.h>
 #endif //ENABLE_MPI
 
+#ifdef APOLLO_ENABLE_CUDA
+#include <cuda_runtime_api.h>
+#endif
+
 int
 Apollo::Region::getPolicyIndex(void)
 {
@@ -378,6 +382,12 @@ Apollo::Region::end(double duration)
 void
 Apollo::Region::end(void)
 {
+#ifdef APOLLO_ENABLE_CUDA
+    if (apollo->isTrainCycle){
+        cudaDeviceSynchronize();
+    }
+#endif
+
     current_exec_time_end = std::chrono::steady_clock::now();
     double duration = std::chrono::duration<double>(current_exec_time_end - current_exec_time_begin).count();
     end(duration);
