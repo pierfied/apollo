@@ -704,12 +704,11 @@ Apollo::flushAllRegionMeasurements(int step)
             for (auto &measure: reg->trainMeasures) {
                 auto state = std::get<0>(measure);
                 auto policy = std::get<1>(measure);
-                auto actual_block_size = std::get<2>(measure);
-                auto duration = std::get<3>(measure);
+                auto duration = std::get<2>(measure);
 
                 states.push_back(state);
                 actions.push_back(policy);
-                rewards.push_back(-std::log(duration));
+                rewards.push_back(-duration);
             }
 
             PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());

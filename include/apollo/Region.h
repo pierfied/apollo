@@ -40,7 +40,6 @@ class Apollo::Region {
 
         int      current_policy;
         int      current_elem_count;
-        int      actual_block_size;
 
         int      num_features;
         void     setFeature(float value);
@@ -61,7 +60,7 @@ class Apollo::Region {
         std::unique_ptr<TimingModel> time_model;
         std::unique_ptr<PolicyModel> model;
 
-        std::vector<std::tuple<std::vector<float>, int, int, double>> trainMeasures;
+        std::vector<std::tuple<std::vector<float>, int, double>> trainMeasures;
 
     private:
         //

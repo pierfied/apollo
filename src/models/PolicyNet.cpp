@@ -108,7 +108,6 @@ int PolicyNet::getIndex(std::vector<float> &state) {
 
         // Delete the state array.
         delete[] evalState;
-//        delete evalActionProbs;
 
         // Add the action probabilities to the cache to be reused later.
         cache2.insert(std::make_pair(state[0], actionProbs));

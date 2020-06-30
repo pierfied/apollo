@@ -243,7 +243,7 @@ Apollo::Region::end(double duration)
         iter->second->time_total += duration;
     }
 
-    trainMeasures.push_back(std::make_tuple(features, current_policy, actual_block_size, duration));
+    trainMeasures.push_back(std::make_tuple(features, current_policy, duration));
 
     if (apollo->traceEnabled) {
         // TODO(cdw): extract the correct values.
