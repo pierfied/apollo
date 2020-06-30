@@ -13,9 +13,9 @@
 class FCLayer {
 public:
     FCLayer(int inputSize, int outputSize) : inputSize(inputSize), outputSize(outputSize) {
-        std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
-        double bound = std::sqrt(6. / (inputSize + outputSize)) * 0.1;
-        std::uniform_real_distribution<double> distribution(-bound, bound);
+        std::mt19937_64 generator(std::chrono::system_clock::now().time_since_epoch().count());
+        double stddev = std::sqrt(2 / inputSize);
+        std::normal_distribution<double> distribution(0., stddev);
 
         weights = new double[outputSize * inputSize]();
         weights_m = new double[outputSize * inputSize]();
@@ -32,7 +32,7 @@ public:
                 weights[i * inputSize + j] = distribution(generator);
             }
 
-            bias[i] = distribution(generator);
+//            bias[i] = distribution(generator);
         }
     };
 
@@ -260,7 +260,6 @@ public:
         auto aout3_grad = softmax.lossGrad(action, aout3, reward, batchSize, outputSize);
         auto out3_grad = layer3.backward(aout2, aout3_grad, batchSize);
         auto aout2_grad = relu2.backward(out2, out3_grad, batchSize, hiddenSize);
-//        auto aout2_grad = softmax.lossGrad(out2, action, aout2, reward);
         auto out2_grad = layer2.backward(aout1, aout2_grad, batchSize);
         auto aout1_grad = relu1.backward(out1, out2_grad, batchSize, hiddenSize);
         layer1.backward(state, aout1_grad, batchSize);
@@ -300,7 +299,7 @@ public:
 private:
     int numPolicies;
     Net net;
-    std::default_random_engine gen;
+    std::mt19937_64 gen;
 }; //end: PolicyNet (class)
 
 
