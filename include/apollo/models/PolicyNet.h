@@ -315,7 +315,7 @@ private:
 
 class PolicyNet : public PolicyModel {
 public:
-    PolicyNet(int num_policies, int num_features);
+    PolicyNet(int num_policies, int num_features, double beta);
 
     ~PolicyNet();
 
@@ -331,6 +331,8 @@ private:
     int numPolicies;
     Net net;
     std::mt19937_64 gen;
+    double rewardMovingAvg;
+    double beta;
 }; //end: PolicyNet (class)
 
 

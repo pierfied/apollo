@@ -34,10 +34,9 @@
 #include <iostream>
 #include "apollo/models/PolicyNet.h"
 
-PolicyNet::PolicyNet(int numPolicies, int numFeatures) : PolicyModel(numPolicies, "PolicyNet", true),
-                                                         numPolicies(numPolicies),
-                                                         net(numFeatures, (numFeatures + numPolicies) / 2,
-                                                             numPolicies) {
+PolicyNet::PolicyNet(int numPolicies, int numFeatures, double beta = 0.5) :
+        PolicyModel(numPolicies, "PolicyNet", true), numPolicies(numPolicies),
+        net(numFeatures, (numFeatures + numPolicies) / 2, numPolicies), beta(beta) {
     gen.seed(std::chrono::system_clock::now().time_since_epoch().count());
 }
 
@@ -54,12 +53,20 @@ PolicyNet::trainNet(std::vector<std::vector<float>> &states, std::vector<int> &a
     int *trainActions = new int[batchSize];
     double *trainRewards = new double[batchSize];
 
+    double batchRewardAvg = 0;
+    for (int i = 0; i < batchSize; ++i) {
+        batchRewardAvg += rewards[i];
+    }
+    batchRewardAvg /= batchSize;
+
+    rewardMovingAvg = beta * rewardMovingAvg + (1 - beta) * batchRewardAvg;
+
     for (int i = 0; i < batchSize; ++i) {
         for (int j = 0; j < inputSize; ++j) {
             trainStates[i * inputSize + j] = std::log(states[i][j]);
         }
         trainActions[i] = actions[i];
-        trainRewards[i] = rewards[i];
+        trainRewards[i] = rewards[i] - rewardMovingAvg;
     }
 
     net.trainStep(trainStates, trainActions, trainRewards, batchSize);
@@ -106,6 +113,7 @@ int PolicyNet::getIndex(std::vector<float> &state) {
     return policyIndex;
 }
 
+//TODO: Implement network saving.
 void PolicyNet::store(const std::string &filename) {
 
 }
