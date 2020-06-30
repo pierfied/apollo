@@ -217,8 +217,8 @@ Apollo::Apollo()
     Config::APOLLO_RETRAIN_TIME_THRESHOLD   = std::stof( apolloUtils::safeGetEnv( "APOLLO_RETRAIN_TIME_THRESHOLD", "2.0" ) );
     Config::APOLLO_RETRAIN_REGION_THRESHOLD = std::stof( apolloUtils::safeGetEnv( "APOLLO_RETRAIN_REGION_THRESHOLD", "0.5" ) );
 
-    Config::APOLLO_INIT_TRAIN = std::stoi(apolloUtils::safeGetEnv("APOLLO_INIT_TRAIN", "100"));
-    Config::APOLLO_TRAIN_FREQ = std::stoi(apolloUtils::safeGetEnv("APOLLO_TRAIN_FREQ", "10"));
+    Config::APOLLO_INIT_TRAIN = std::stoi(apolloUtils::safeGetEnv("APOLLO_INIT_TRAIN", "0"));
+    Config::APOLLO_TRAIN_FREQ = std::stoi(apolloUtils::safeGetEnv("APOLLO_TRAIN_FREQ", "1"));
 
     //std::cout << "init model " << Config::APOLLO_INIT_MODEL << std::endl;
     //std::cout << "collective " << Config::APOLLO_COLLECTIVE_TRAINING << std::endl;
