@@ -37,27 +37,27 @@ public:
     };
 
     ~FCLayer(){
-        delete weights;
-        delete weights_m;
-        delete weights_v;
-        delete weights_grad;
+        delete[] weights;
+        delete[] weights_m;
+        delete[] weights_v;
+        delete[] weights_grad;
 
-        delete bias;
-        delete bias_m;
-        delete bias_v;
-        delete bias_grad;
+        delete[] bias;
+        delete[] bias_m;
+        delete[] bias_v;
+        delete[] bias_grad;
 
         if (outputs != NULL) {
-            delete outputs;
-            delete inputGrad;
+            delete[] outputs;
+            delete[] inputGrad;
         }
     }
 
     double *forward(double *inputs, int batchSize) {
         if (batchSize > maxBatchSize){
             if (outputs != NULL) {
-                delete outputs;
-                delete inputGrad;
+                delete[] outputs;
+                delete[] inputGrad;
             }
 
             outputs = new double[batchSize * outputSize]();
@@ -159,8 +159,8 @@ class Relu {
 public:
     ~Relu(){
         if (outputs != NULL) {
-            delete outputs;
-            delete inputGrad;
+            delete[] outputs;
+            delete[] inputGrad;
         }
     }
 
@@ -169,8 +169,8 @@ public:
             maxArraySize = batchSize * outputSize;
 
             if (outputs != NULL) {
-                delete outputs;
-                delete inputGrad;
+                delete[] outputs;
+                delete[] inputGrad;
             }
 
             outputs = new double[maxArraySize];
@@ -202,8 +202,8 @@ class Softmax {
 public:
     ~Softmax(){
         if (outputs != NULL) {
-            delete outputs;
-            delete inputGrad;
+            delete[] outputs;
+            delete[] inputGrad;
         }
     }
 
@@ -212,8 +212,8 @@ public:
             maxArraySize = batchSize * outputSize;
 
             if (outputs != NULL) {
-                delete outputs;
-                delete inputGrad;
+                delete[] outputs;
+                delete[] inputGrad;
             }
 
             outputs = new double[maxArraySize];

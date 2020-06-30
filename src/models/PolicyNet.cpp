@@ -64,9 +64,9 @@ PolicyNet::trainNet(std::vector<std::vector<float>> &states, std::vector<int> &a
 
     net.trainStep(trainStates, trainActions, trainRewards, batchSize);
 
-    delete trainStates;
-    delete trainActions;
-    delete trainRewards;
+    delete[] trainStates;
+    delete[] trainActions;
+    delete[] trainRewards;
 }
 
 int PolicyNet::getIndex(std::vector<float> &state) {
@@ -87,7 +87,7 @@ int PolicyNet::getIndex(std::vector<float> &state) {
             actionProbs[i] = evalActionProbs[i];
         }
 
-        delete evalState;
+        delete[] evalState;
 //        delete evalActionProbs;
 
         cache2.insert(std::make_pair(state[0], actionProbs));
