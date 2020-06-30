@@ -87,6 +87,9 @@ class Apollo
         //
         int numThreads;  // <-- how many to use / are in use
 
+        int cycleCount = 0;
+        bool isTrainCycle = true;
+
         // NOTE(chad): We default to walk_distance of 2 so we can
         //             step out of this method, then step out of
         //             some portable policy template, and get to the

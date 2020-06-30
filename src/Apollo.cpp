@@ -217,6 +217,9 @@ Apollo::Apollo()
     Config::APOLLO_RETRAIN_TIME_THRESHOLD   = std::stof( apolloUtils::safeGetEnv( "APOLLO_RETRAIN_TIME_THRESHOLD", "2.0" ) );
     Config::APOLLO_RETRAIN_REGION_THRESHOLD = std::stof( apolloUtils::safeGetEnv( "APOLLO_RETRAIN_REGION_THRESHOLD", "0.5" ) );
 
+    Config::APOLLO_INIT_TRAIN = std::stoi(apolloUtils::safeGetEnv("APOLLO_INIT_TRAIN", "100"));
+    Config::APOLLO_TRAIN_FREQ = std::stoi(apolloUtils::safeGetEnv("APOLLO_TRAIN_FREQ", "10"));
+
     //std::cout << "init model " << Config::APOLLO_INIT_MODEL << std::endl;
     //std::cout << "collective " << Config::APOLLO_COLLECTIVE_TRAINING << std::endl;
     //std::cout << "local "      << Config::APOLLO_LOCAL_TRAINING << std::endl;
@@ -627,29 +630,41 @@ Apollo::flushAllRegionMeasurements(int step)
     int rank = mpiRank;  //Automatically 0 if not an MPI environment.
 
     if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("PolicyNet") != std::string::npos){
-        for( auto &it : regions ) {
-            Region *reg = it.second;
+        if (cycleCount >= Config::APOLLO_INIT_TRAIN && cycleCount % Config::APOLLO_TRAIN_FREQ != 0){
+            clearTrainRegionMeasurements();
+        } else {
+            for( auto &it : regions ) {
+                Region *reg = it.second;
 
-            std::vector<std::vector<float>> states;
-            std::vector<int> actions;
-            std::vector<double> rewards;
+                std::vector<std::vector<float>> states;
+                std::vector<int> actions;
+                std::vector<double> rewards;
 
-            for (auto &measure: reg->trainMeasures) {
-                auto state = std::get<0>(measure);
-                auto policy = std::get<1>(measure);
-                auto duration = std::get<2>(measure);
+                for (auto &measure: reg->trainMeasures) {
+                    auto state = std::get<0>(measure);
+                    auto policy = std::get<1>(measure);
+                    auto duration = std::get<2>(measure);
 
-                states.push_back(state);
-                actions.push_back(policy);
-                rewards.push_back(-duration);
+                    states.push_back(state);
+                    actions.push_back(policy);
+                    rewards.push_back(-duration);
+                }
+
+                PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());
+
+                model->trainNet(states, actions, rewards);
+
+                reg->trainMeasures.clear();
+                model->cache2.clear();
             }
+        }
 
-            PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());
+        cycleCount++;
 
-            model->trainNet(states, actions, rewards);
-
-            reg->trainMeasures.clear();
-            model->cache2.clear();
+        if (cycleCount < Config::APOLLO_INIT_TRAIN || cycleCount % Config::APOLLO_TRAIN_FREQ == 0){
+            isTrainCycle = true;
+        } else{
+            isTrainCycle = false;
         }
 
         return;

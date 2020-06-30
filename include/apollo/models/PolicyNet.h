@@ -255,7 +255,7 @@ public:
             }
         }
 
-        // Calculate the probablities for each output using softmax.
+        // Calculate the probabilities for each output using softmax.
         for (int i = 0; i < batchSize; ++i) {
             double sum = 0;
             for (int j = 0; j < outputSize; ++j) {

@@ -19,6 +19,9 @@ class Config {
         static int APOLLO_TRACE_BEST_POLICIES;
         static std::string APOLLO_INIT_MODEL;
 
+        static int APOLLO_INIT_TRAIN;
+        static int APOLLO_TRAIN_FREQ;
+
     private:
         Config();
 };
