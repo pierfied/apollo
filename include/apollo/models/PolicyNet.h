@@ -15,7 +15,7 @@ public:
     FCLayer(int inputSize, int outputSize) : inputSize(inputSize), outputSize(outputSize) {
         // Create the random number generator and the distribution for He initialization.
         std::mt19937_64 generator(std::chrono::system_clock::now().time_since_epoch().count());
-        double stddev = std::sqrt(2 / inputSize);
+        double stddev = std::sqrt(2. / inputSize);
         std::normal_distribution<double> distribution(0., stddev);
 
         // Allocate and zero initialize the arrays needed for the parameters.
