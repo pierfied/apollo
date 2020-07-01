@@ -217,6 +217,9 @@ Apollo::Apollo()
     Config::APOLLO_RETRAIN_TIME_THRESHOLD   = std::stof( apolloUtils::safeGetEnv( "APOLLO_RETRAIN_TIME_THRESHOLD", "2.0" ) );
     Config::APOLLO_RETRAIN_REGION_THRESHOLD = std::stof( apolloUtils::safeGetEnv( "APOLLO_RETRAIN_REGION_THRESHOLD", "0.5" ) );
 
+    Config::APOLLO_INIT_TRAIN = std::stoi(apolloUtils::safeGetEnv("APOLLO_INIT_TRAIN", "0"));
+    Config::APOLLO_TRAIN_FREQ = std::stoi(apolloUtils::safeGetEnv("APOLLO_TRAIN_FREQ", "1"));
+
     //std::cout << "init model " << Config::APOLLO_INIT_MODEL << std::endl;
     //std::cout << "collective " << Config::APOLLO_COLLECTIVE_TRAINING << std::endl;
     //std::cout << "local "      << Config::APOLLO_LOCAL_TRAINING << std::endl;
@@ -622,9 +625,60 @@ Apollo::gatherReduceCollectiveTrainingData(int step)
 
 
 void
-Apollo::flushAllRegionMeasurements(int step)
+Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan = defaultNextCycle)
 {
     int rank = mpiRank;  //Automatically 0 if not an MPI environment.
+
+    if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("PolicyNet") != std::string::npos){
+        if (isTrainCycle){
+            for( auto &it : regions ) {
+                Region *reg = it.second;
+
+                std::vector<std::vector<float>> states;
+                std::vector<int> actions;
+                std::vector<double> rewards;
+
+                for (auto &measure: reg->trainMeasures) {
+                    auto state = std::get<0>(measure);
+                    auto policy = std::get<1>(measure);
+                    auto duration = std::get<2>(measure);
+
+                    states.push_back(state);
+                    actions.push_back(policy);
+                    rewards.push_back(-duration);
+                }
+
+                PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());
+
+                model->trainNet(states, actions, rewards);
+
+                reg->trainMeasures.clear();
+                model->cache2.clear();
+            }
+        } else {
+            clearTrainRegionMeasurements();
+        }
+
+        cycleCount++;
+
+        switch (trainPlan) {
+            case trainNextCycle:
+                isTrainCycle = true;
+                break;
+            case doNotTrainNextCycle:
+                isTrainCycle = false;
+                break;
+            case defaultNextCycle:
+                if (cycleCount < Config::APOLLO_INIT_TRAIN || cycleCount % Config::APOLLO_TRAIN_FREQ == 0){
+                    isTrainCycle = true;
+                } else{
+                    isTrainCycle = false;
+                }
+                break;
+        }
+
+        return;
+    }
 
     // Reduce local region measurements to best policies
     // NOTE[chad]: reg->reduceBestPolicies() will guard any MPI collectives
@@ -704,12 +758,11 @@ Apollo::flushAllRegionMeasurements(int step)
             for (auto &measure: reg->trainMeasures) {
                 auto state = std::get<0>(measure);
                 auto policy = std::get<1>(measure);
-                auto actual_block_size = std::get<2>(measure);
-                auto duration = std::get<3>(measure);
+                auto duration = std::get<2>(measure);
 
                 states.push_back(state);
                 actions.push_back(policy);
-                rewards.push_back(-std::log(duration));
+                rewards.push_back(-duration);
             }
 
             PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());
@@ -858,7 +911,6 @@ Apollo::flushAllRegionMeasurements(int step)
 void
 Apollo::clearTrainRegionMeasurements()
 {
-    std::stringstream granular_measures_string;
     for( auto &it: regions ) {
         Region *reg = it.second;
 

@@ -195,6 +195,11 @@ else()
     message(STATUS "---- OPENMP:  Not found.")
 endif(OPENMP_FOUND)
 
+if (ENABLE_CUDA)
+    find_package(CUDA REQUIRED)
+    add_definitions(-DAPOLLO_ENABLE_CUDA)
+    include_directories(${CUDA_INCLUDE_DIRS})
+endif ()
 
 find_package(callpath REQUIRED)
 if(callpath_CONFIG_LOADED)

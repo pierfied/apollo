@@ -31,6 +31,7 @@ std::unique_ptr<TimingModel> ModelFactory::createRegressionTree(
     return std::make_unique<RegressionTree>( features, responses );
 }
 
-std::unique_ptr<PolicyModel> ModelFactory::createPolicyNet(int numPolicies, int numFeatures) {
-    return std::make_unique<PolicyNet>(numPolicies, numFeatures);
+std::unique_ptr<PolicyModel> ModelFactory::createPolicyNet(int numPolicies, int numFeatures, double lr, double beta,
+        double beta1, double beta2, double featureScaling) {
+    return std::make_unique<PolicyNet>(numPolicies, numFeatures, lr, beta, beta1, beta2, featureScaling);
 }

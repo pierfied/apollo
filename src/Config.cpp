@@ -18,4 +18,6 @@ int Config::APOLLO_TRACE_ALLGATHER;
 int Config::APOLLO_TRACE_BEST_POLICIES;
 std::string Config::APOLLO_INIT_MODEL;
 
+int Config::APOLLO_INIT_TRAIN;
+int Config::APOLLO_TRAIN_FREQ;
 

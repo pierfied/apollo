@@ -10,6 +10,12 @@
 
 #include "apollo/Config.h"
 
+enum TrainingPlan{
+    trainNextCycle,
+    doNotTrainNextCycle,
+    defaultNextCycle
+};
+
 //TODO(cdw): Convert 'Apollo' into a namespace and convert this into
 //           a 'Runtime' class.
 class Apollo
@@ -87,6 +93,9 @@ class Apollo
         //
         int numThreads;  // <-- how many to use / are in use
 
+        int cycleCount = 0;
+        bool isTrainCycle = true;
+
         // NOTE(chad): We default to walk_distance of 2 so we can
         //             step out of this method, then step out of
         //             some portable policy template, and get to the
@@ -95,7 +104,7 @@ class Apollo
         std::string getCallpathOffset(int walk_distance=2);
         void *callpath_ptr;
 
-        void flushAllRegionMeasurements(int step);
+        void flushAllRegionMeasurements(int step, TrainingPlan trainPlan);
         void clearTrainRegionMeasurements();
 
     private:

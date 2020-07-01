@@ -75,7 +75,7 @@ set(APOLLO_SOURCES
 
 add_library(apollo SHARED ${APOLLO_SOURCES})
 
-target_link_libraries(apollo PRIVATE dl ${OpenCV_LIBS})
+target_link_libraries(apollo PRIVATE dl ${OpenCV_LIBS} ${CUDA_LIBRARIES})
 
 foreach(_extlib ${APOLLO_EXTERNAL_LIBS})
     target_link_libraries(apollo PRIVATE ${_extlib})
