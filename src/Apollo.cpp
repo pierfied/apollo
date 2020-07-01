@@ -625,14 +625,12 @@ Apollo::gatherReduceCollectiveTrainingData(int step)
 
 
 void
-Apollo::flushAllRegionMeasurements(int step)
+Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan = defaultNextCycle)
 {
     int rank = mpiRank;  //Automatically 0 if not an MPI environment.
 
     if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("PolicyNet") != std::string::npos){
-        if (cycleCount >= Config::APOLLO_INIT_TRAIN && cycleCount % Config::APOLLO_TRAIN_FREQ != 0){
-            clearTrainRegionMeasurements();
-        } else {
+        if (isTrainCycle){
             for( auto &it : regions ) {
                 Region *reg = it.second;
 
@@ -657,14 +655,26 @@ Apollo::flushAllRegionMeasurements(int step)
                 reg->trainMeasures.clear();
                 model->cache2.clear();
             }
+        } else {
+            clearTrainRegionMeasurements();
         }
 
         cycleCount++;
 
-        if (cycleCount < Config::APOLLO_INIT_TRAIN || cycleCount % Config::APOLLO_TRAIN_FREQ == 0){
-            isTrainCycle = true;
-        } else{
-            isTrainCycle = false;
+        switch (trainPlan) {
+            case trainNextCycle:
+                isTrainCycle = true;
+                break;
+            case doNotTrainNextCycle:
+                isTrainCycle = false;
+                break;
+            case defaultNextCycle:
+                if (cycleCount < Config::APOLLO_INIT_TRAIN || cycleCount % Config::APOLLO_TRAIN_FREQ == 0){
+                    isTrainCycle = true;
+                } else{
+                    isTrainCycle = false;
+                }
+                break;
         }
 
         return;
