@@ -366,7 +366,7 @@ private:
     int numPolicies;
     Net net;
     std::mt19937_64 gen;
-    double rewardMovingAvg;
+    double rewardMovingAvg = 0;
     double beta;
     double featureScaling;
 }; //end: PolicyNet (class)
