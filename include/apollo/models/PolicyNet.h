@@ -369,6 +369,7 @@ private:
     double rewardMovingAvg = 0;
     double beta;
     double featureScaling;
+    int trainCount = 0;
 }; //end: PolicyNet (class)
 
 

@@ -67,13 +67,16 @@ PolicyNet::trainNet(std::vector<std::vector<float>> &states, std::vector<int> &a
     // Update the moving average of the reward.
     rewardMovingAvg = beta * rewardMovingAvg + (1 - beta) * batchRewardAvg;
 
+    // Debias the estimate of the moving average.
+    double baseline = rewardMovingAvg / (1 - std::pow(beta, ++trainCount));
+
     // Fill the arrays used for training.
     for (int i = 0; i < batchSize; ++i) {
         for (int j = 0; j < inputSize; ++j) {
             trainStates[i * inputSize + j] = std::log(states[i][j]) / featureScaling; // Use log to normalize the feature scales.
         }
         trainActions[i] = actions[i];
-        trainRewards[i] = rewards[i] - rewardMovingAvg; // Subtract the moving average baseline to reduce variance.
+        trainRewards[i] = rewards[i] - baseline; // Subtract the moving average baseline to reduce variance.
     }
 
     // Train the network.
