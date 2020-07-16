@@ -331,6 +331,10 @@ Apollo::~Apollo()
     delete (CallpathRuntime *)callpath_ptr;
 }
 
+Apollo* Apollo::instance(void) noexcept {
+    static Apollo the_instance;
+    return &the_instance;
+}
 
 //////////
 //

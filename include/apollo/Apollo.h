@@ -26,10 +26,7 @@ class Apollo
         Apollo(const Apollo&) = delete;
         Apollo& operator=(const Apollo&) = delete;
 
-        static Apollo* instance(void) noexcept {
-            static Apollo the_instance;
-            return &the_instance;
-        }
+        static Apollo* instance(void) noexcept;
 
         class Region;
 
