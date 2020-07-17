@@ -101,7 +101,7 @@ class Apollo
         std::string getCallpathOffset(int walk_distance=2);
         void *callpath_ptr;
 
-        void flushAllRegionMeasurements(int step, TrainingPlan trainPlan);
+        void flushAllRegionMeasurements(int step, TrainingPlan trainPlan = defaultNextCycle);
         void clearTrainRegionMeasurements();
 
     private:

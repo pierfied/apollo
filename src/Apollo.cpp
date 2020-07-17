@@ -629,7 +629,7 @@ Apollo::gatherReduceCollectiveTrainingData(int step)
 
 
 void
-Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan = defaultNextCycle)
+Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
 {
     int rank = mpiRank;  //Automatically 0 if not an MPI environment.
 
