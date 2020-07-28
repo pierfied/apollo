@@ -62,7 +62,7 @@ class Apollo::Region {
 
         std::vector<std::tuple<std::vector<float>, int, double>> trainMeasures;
 
-        static std::string nextFileName;
+        static const char* nextFileName;
         static int nextLineNumber;
 
         std::string fileName;

@@ -108,7 +108,7 @@ Apollo::Region::getPolicyIndex(void)
 }
 
 
-std::string Apollo::Region::nextFileName = "";
+const char* Apollo::Region::nextFileName = "";
 int Apollo::Region::nextLineNumber = -1;
 
 Apollo::Region::Region(
@@ -118,10 +118,10 @@ Apollo::Region::Region(
     :
         num_features(num_features)
 {
-    fileName = nextFileName;
+    fileName = std::string(nextFileName);
     lineNumber = nextLineNumber;
 
-    nextFileName = "";
+    nextFileName = NULL;
     nextLineNumber = -1;
 
     apollo = Apollo::instance();
