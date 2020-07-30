@@ -155,6 +155,7 @@ Apollo::Region::Region(
         double beta1 = 0.5;
         double beta2 = 0.9;
         double featureScaling = 64 * std::log(2.);
+        double threshold = 0.;
 
         while (pos != std::string::npos){
             auto new_pos = Config::APOLLO_INIT_MODEL.find(",", pos+1);
@@ -174,12 +175,14 @@ Apollo::Region::Region(
                 beta2 = value;
             } else if (varName == "scale"){
                 featureScaling = value;
+            } else if (varName == "threshold"){
+                threshold = value;
             }
 
             pos = new_pos;
         }
 
-        model = ModelFactory::createPolicyNet(apollo->num_policies, 1, lr, beta, beta1, beta2, featureScaling);
+        model = ModelFactory::createPolicyNet(apollo->num_policies, 1, lr, beta, beta1, beta2, featureScaling, threshold);
     }
     else {
         std::cerr << "Invalid model env var: " + Config::APOLLO_INIT_MODEL << std::endl;

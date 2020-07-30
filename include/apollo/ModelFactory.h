@@ -22,7 +22,7 @@ class ModelFactory {
                 std::vector<float> &responses );
 
         static std::unique_ptr<PolicyModel> createPolicyNet(int numPolicies, int numFeatures, double lr, double beta,
-                double beta1, double beta2, double featureScaling);
+                double beta1, double beta2, double featureScaling, double threshold);
 }; //end: ModelFactory
 
 

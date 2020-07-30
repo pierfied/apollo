@@ -350,7 +350,7 @@ private:
 class PolicyNet : public PolicyModel {
 public:
     PolicyNet(int num_policies, int num_features, double lr, double beta, double beta1, double beta2,
-            double featureScaling);
+            double featureScaling, double threshold);
 
     ~PolicyNet();
 
@@ -369,6 +369,7 @@ private:
     double rewardMovingAvg = 0;
     double beta;
     double featureScaling;
+    double threshold;
     int trainCount = 0;
 }; //end: PolicyNet (class)
 
