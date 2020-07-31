@@ -154,16 +154,17 @@ public:
         }
     }
 
-private:
     int inputSize;
     int outputSize;
-    long stepNum = 0;
 
     double *weights;
+    double *bias;
+
+private:
+    long stepNum = 0;
     double *weights_m;
     double *weights_v;
     double *weights_grad;
-    double *bias;
     double *bias_m;
     double *bias_v;
     double *bias_grad;
@@ -332,6 +333,10 @@ public:
         layer3.step(learnRate, beta1, beta2);
     }
 
+    FCLayer layer1;
+    FCLayer layer2;
+    FCLayer layer3;
+
 private:
     int inputSize;
     int hiddenSize;
@@ -339,9 +344,6 @@ private:
     double learnRate;
     double beta1;
     double beta2;
-    FCLayer layer1;
-    FCLayer layer2;
-    FCLayer layer3;
     Relu relu1;
     Relu relu2;
     Softmax softmax;

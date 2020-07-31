@@ -32,6 +32,7 @@
 
 #include <random>
 #include <iostream>
+#include <fstream>
 #include "apollo/models/PolicyNet.h"
 
 PolicyNet::PolicyNet(int numPolicies, int numFeatures, double lr = 1e-2, double beta = 0.5, double beta1 = 0.5,
@@ -141,7 +142,23 @@ int PolicyNet::getIndex(std::vector<float> &state) {
     return policyIndex;
 }
 
-//TODO: Implement network saving.
 void PolicyNet::store(const std::string &filename) {
+    // Open the output file in binary write mode.
+    std::ofstream f(filename, std::ios::out | std::ios::binary);
 
+    // Check if the file was opened successfully.
+    if(!f){
+        std::cout << "Could not save model to " << filename << std::endl;
+        return;
+    }
+
+    // Write the weights and biases of each layer to the output file.
+    f.write((char *) net.layer1.weights, net.layer1.inputSize * net.layer1.outputSize);
+    f.write((char *) net.layer1.bias, net.layer1.outputSize);
+    f.write((char *) net.layer2.weights, net.layer2.inputSize * net.layer2.outputSize);
+    f.write((char *) net.layer2.bias, net.layer2.outputSize);
+    f.write((char *) net.layer3.weights, net.layer3.inputSize * net.layer3.outputSize);
+    f.write((char *) net.layer3.bias, net.layer3.outputSize);
+
+    f.close();
 }
