@@ -361,6 +361,7 @@ public:
     void trainNet(std::vector<std::vector<float>> &states, std::vector<int> &actions, std::vector<double> &rewards);
 
     void store(const std::string &filename);
+    void load(const std::string &filename);
 
     std::map<std::vector<float>, std::vector<double>> cache;
     std::unordered_map<float, std::vector<double>> cache2;

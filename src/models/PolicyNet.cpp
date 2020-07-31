@@ -144,7 +144,7 @@ int PolicyNet::getIndex(std::vector<float> &state) {
 
 void PolicyNet::store(const std::string &filename) {
     // Open the output file in binary write mode.
-    std::ofstream f(filename, std::ios::out | std::ios::binary);
+    std::ofstream f(filename, std::ios::binary);
 
     // Check if the file was opened successfully.
     if(!f){
@@ -159,6 +159,27 @@ void PolicyNet::store(const std::string &filename) {
     f.write((char *) net.layer2.bias, net.layer2.outputSize);
     f.write((char *) net.layer3.weights, net.layer3.inputSize * net.layer3.outputSize);
     f.write((char *) net.layer3.bias, net.layer3.outputSize);
+
+    f.close();
+}
+
+void PolicyNet::load(const std::string &filename) {
+    // Open the save file in binary read mode.
+    std::ifstream f(filename, std::ios::binary);
+
+    // Check if the file was opened successfully.
+    if(!f){
+        std::cout << "Could not load model from " << filename << std::endl;
+        return;
+    }
+
+    // Load the weights and biases of each layer from the save file.
+    f.read((char *) net.layer1.weights, net.layer1.inputSize * net.layer1.outputSize);
+    f.read((char *) net.layer1.bias, net.layer1.outputSize);
+    f.read((char *) net.layer2.weights, net.layer2.inputSize * net.layer2.outputSize);
+    f.read((char *) net.layer2.bias, net.layer2.outputSize);
+    f.read((char *) net.layer3.weights, net.layer3.inputSize * net.layer3.outputSize);
+    f.read((char *) net.layer3.bias, net.layer3.outputSize);
 
     f.close();
 }
