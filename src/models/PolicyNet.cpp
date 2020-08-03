@@ -160,6 +160,10 @@ void PolicyNet::store(const std::string &filename) {
     f.write((char *) net.layer3.weights, sizeof(double) * net.layer3.inputSize * net.layer3.outputSize);
     f.write((char *) net.layer3.bias, sizeof(double) * net.layer3.outputSize);
 
+    // Store reward moving average so that the threshold still works if the model is loaded without retraining.
+    f.write((char *) &rewardMovingAvg, sizeof(double));
+    f.write((char *) &trainCount, sizeof(int));
+
     f.close();
 }
 
@@ -180,6 +184,10 @@ void PolicyNet::load(const std::string &filename) {
     f.read((char *) net.layer2.bias, sizeof(double) * net.layer2.outputSize);
     f.read((char *) net.layer3.weights, sizeof(double) * net.layer3.inputSize * net.layer3.outputSize);
     f.read((char *) net.layer3.bias, sizeof(double) * net.layer3.outputSize);
+
+    // Load reward moving average so that the threshold still works if the model is loaded without retraining.
+    f.read((char *) &rewardMovingAvg, sizeof(double));
+    f.read((char *) &trainCount, sizeof(int));
 
     f.close();
 }
