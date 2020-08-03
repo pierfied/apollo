@@ -220,6 +220,9 @@ Apollo::Apollo()
     Config::APOLLO_INIT_TRAIN = std::stoi(apolloUtils::safeGetEnv("APOLLO_INIT_TRAIN", "100"));
     Config::APOLLO_TRAIN_FREQ = std::stoi(apolloUtils::safeGetEnv("APOLLO_TRAIN_FREQ", "0"));
 
+    Config::APOLLO_MODEL_SAVE_DIR = apolloUtils::safeGetEnv("APOLLO_MODEL_SAVE_DIR", "");
+    Config::APOLLO_SAVE_AFTER_TRAIN = std::stoi(apolloUtils::safeGetEnv("APOLLO_SAVE_AFTER_TRAIN", "0"));
+
     //std::cout << "init model " << Config::APOLLO_INIT_MODEL << std::endl;
     //std::cout << "collective " << Config::APOLLO_COLLECTIVE_TRAINING << std::endl;
     //std::cout << "local "      << Config::APOLLO_LOCAL_TRAINING << std::endl;
@@ -679,6 +682,11 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
                     isTrainCycle = false;
                 }
                 break;
+        }
+
+        // Save the models if saving is requested and training is completed.
+        if(Config::APOLLO_SAVE_AFTER_TRAIN && Config::APOLLO_MODEL_SAVE_DIR != "" && cycleCount == Config::APOLLO_INIT_TRAIN){
+            saveModels(Config::APOLLO_MODEL_SAVE_DIR);
         }
 
         return;
