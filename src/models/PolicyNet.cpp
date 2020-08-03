@@ -147,18 +147,18 @@ void PolicyNet::store(const std::string &filename) {
     std::ofstream f(filename, std::ios::binary);
 
     // Check if the file was opened successfully.
-    if(!f){
+    if (!f) {
         std::cout << "Could not save model to " << filename << std::endl;
         return;
     }
 
     // Write the weights and biases of each layer to the output file.
-    f.write((char *) net.layer1.weights, net.layer1.inputSize * net.layer1.outputSize);
-    f.write((char *) net.layer1.bias, net.layer1.outputSize);
-    f.write((char *) net.layer2.weights, net.layer2.inputSize * net.layer2.outputSize);
-    f.write((char *) net.layer2.bias, net.layer2.outputSize);
-    f.write((char *) net.layer3.weights, net.layer3.inputSize * net.layer3.outputSize);
-    f.write((char *) net.layer3.bias, net.layer3.outputSize);
+    f.write((char *) net.layer1.weights, sizeof(double) * net.layer1.inputSize * net.layer1.outputSize);
+    f.write((char *) net.layer1.bias, sizeof(double) * net.layer1.outputSize);
+    f.write((char *) net.layer2.weights, sizeof(double) * net.layer2.inputSize * net.layer2.outputSize);
+    f.write((char *) net.layer2.bias, sizeof(double) * net.layer2.outputSize);
+    f.write((char *) net.layer3.weights, sizeof(double) * net.layer3.inputSize * net.layer3.outputSize);
+    f.write((char *) net.layer3.bias, sizeof(double) * net.layer3.outputSize);
 
     f.close();
 }
@@ -168,18 +168,18 @@ void PolicyNet::load(const std::string &filename) {
     std::ifstream f(filename, std::ios::binary);
 
     // Check if the file was opened successfully.
-    if(!f){
+    if (!f) {
         std::cout << "Could not load model from " << filename << std::endl;
         return;
     }
 
     // Load the weights and biases of each layer from the save file.
-    f.read((char *) net.layer1.weights, net.layer1.inputSize * net.layer1.outputSize);
-    f.read((char *) net.layer1.bias, net.layer1.outputSize);
-    f.read((char *) net.layer2.weights, net.layer2.inputSize * net.layer2.outputSize);
-    f.read((char *) net.layer2.bias, net.layer2.outputSize);
-    f.read((char *) net.layer3.weights, net.layer3.inputSize * net.layer3.outputSize);
-    f.read((char *) net.layer3.bias, net.layer3.outputSize);
+    f.read((char *) net.layer1.weights, sizeof(double) * net.layer1.inputSize * net.layer1.outputSize);
+    f.read((char *) net.layer1.bias, sizeof(double) * net.layer1.outputSize);
+    f.read((char *) net.layer2.weights, sizeof(double) * net.layer2.inputSize * net.layer2.outputSize);
+    f.read((char *) net.layer2.bias, sizeof(double) * net.layer2.outputSize);
+    f.read((char *) net.layer3.weights, sizeof(double) * net.layer3.inputSize * net.layer3.outputSize);
+    f.read((char *) net.layer3.bias, sizeof(double) * net.layer3.outputSize);
 
     f.close();
 }
