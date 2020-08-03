@@ -53,6 +53,8 @@
 
 #ifdef APOLLO_ENABLE_CUDA
 #include <cuda_runtime_api.h>
+#include <apollo/models/PolicyNet.h>
+
 #endif
 
 int
@@ -183,6 +185,13 @@ Apollo::Region::Region(
         }
 
         model = ModelFactory::createPolicyNet(apollo->num_policies, 1, lr, beta, beta1, beta2, featureScaling, threshold);
+
+        // If the environment variable is set, try to load the saved model for the region if it exists.
+        if (Config::APOLLO_MODEL_SAVE_DIR != ""){
+            std::string fileName = Config::APOLLO_MODEL_SAVE_DIR + "/" + std::string(name) + ".model";
+            PolicyNet *modelPtr = dynamic_cast<PolicyNet *>(model.get());
+            modelPtr->load(fileName);
+        }
     }
     else {
         std::cerr << "Invalid model env var: " + Config::APOLLO_INIT_MODEL << std::endl;
