@@ -245,6 +245,17 @@ Apollo::Region::begin()
     //
 
     current_exec_time_begin = std::chrono::steady_clock::now();
+
+#ifdef APOLLO_ENABLE_CUDA
+    startEvents.emplace_back();
+    stopEvents.emplace_back();
+
+    cudaEventCreate(&(startEvents.back()));
+    cudaEventCreate(&(stopEvents.back()));
+
+    cudaEventRecord(startEvents.back());
+#endif
+
     return;
 }
 
@@ -395,9 +406,11 @@ void
 Apollo::Region::end(void)
 {
 #ifdef APOLLO_ENABLE_CUDA
-    if (apollo->isTrainCycle){
-        cudaDeviceSynchronize();
-    }
+    cudaEventRecord(stopEvents.back());
+
+//    if (apollo->isTrainCycle){
+//        cudaDeviceSynchronize();
+//    }
 #endif
 
     current_exec_time_end = std::chrono::steady_clock::now();

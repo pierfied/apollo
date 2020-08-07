@@ -636,8 +636,24 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
 {
     int rank = mpiRank;  //Automatically 0 if not an MPI environment.
 
+//    for (auto &it: regions){
+//        Region *reg = it.second;
+//
+//        float ms;
+//        cudaEventElapsedTime(&ms, reg->startEvents[0], reg->stopEvents[0]);
+//
+//        std::cout << reg->name << " time: " << ms << std::endl;
+//    }
+
+    if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("Static") != std::string::npos){
+        isTrainCycle = false;
+        return;
+    }
+
     if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("PolicyNet") != std::string::npos){
         if (isTrainCycle){
+            cudaDeviceSynchronize();
+
             for( auto &it : regions ) {
                 Region *reg = it.second;
 
@@ -645,15 +661,25 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
                 std::vector<int> actions;
                 std::vector<double> rewards;
 
+                int ind = 0;
                 for (auto &measure: reg->trainMeasures) {
                     auto state = std::get<0>(measure);
                     auto policy = std::get<1>(measure);
                     auto duration = std::get<2>(measure);
 
+                    float ms;
+                    cudaEventElapsedTime(&ms, reg->startEvents[ind], reg->stopEvents[ind]);
+
                     states.push_back(state);
                     actions.push_back(policy);
-                    rewards.push_back(-duration);
+//                    rewards.push_back(-duration);
+                    rewards.push_back(-ms);
+
+                    ind++;
                 }
+
+                reg->startEvents.clear();
+                reg->stopEvents.clear();
 
                 PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());
 
@@ -676,7 +702,7 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
                 isTrainCycle = false;
                 break;
             case defaultNextCycle:
-                if (cycleCount < Config::APOLLO_INIT_TRAIN || cycleCount % Config::APOLLO_TRAIN_FREQ == 0){
+                if (cycleCount < Config::APOLLO_INIT_TRAIN /*|| cycleCount % Config::APOLLO_TRAIN_FREQ == 0*/){
                     isTrainCycle = true;
                 } else{
                     isTrainCycle = false;

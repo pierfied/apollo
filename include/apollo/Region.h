@@ -15,6 +15,10 @@
 #include <mpi.h>
 #endif //ENABLE_MPI
 
+#ifdef APOLLO_ENABLE_CUDA
+#include <cuda_runtime_api.h>
+#endif
+
 class Apollo::Region {
     public:
         Region(
@@ -61,6 +65,9 @@ class Apollo::Region {
         std::unique_ptr<PolicyModel> model;
 
         std::vector<std::tuple<std::vector<float>, int, double>> trainMeasures;
+
+        std::vector<cudaEvent_t> startEvents;
+        std::vector<cudaEvent_t> stopEvents;
 
     private:
         //
