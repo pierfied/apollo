@@ -15,6 +15,10 @@
 #include <mpi.h>
 #endif //ENABLE_MPI
 
+#ifdef APOLLO_ENABLE_CUDA
+#include <cuda_runtime_api.h>
+#endif
+
 class Apollo::Region {
     public:
         Region(
@@ -67,6 +71,10 @@ class Apollo::Region {
 
         std::string fileName;
         int lineNumber;
+  
+#ifdef APOLLO_ENABLE_CUDA
+        std::vector<std::pair<cudaEvent_t, cudaEvent_t>> events;
+#endif
 
     private:
         //

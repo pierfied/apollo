@@ -21,3 +21,6 @@ std::string Config::APOLLO_INIT_MODEL;
 int Config::APOLLO_INIT_TRAIN;
 int Config::APOLLO_TRAIN_FREQ;
 
+std::string Config::APOLLO_MODEL_SAVE_DIR;
+int Config::APOLLO_SAVE_AFTER_TRAIN;
+

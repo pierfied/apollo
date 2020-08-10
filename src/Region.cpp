@@ -51,6 +51,8 @@
 #include <mpi.h>
 #endif //ENABLE_MPI
 
+#include <apollo/models/PolicyNet.h>
+
 #ifdef APOLLO_ENABLE_CUDA
 #include <cuda_runtime_api.h>
 #endif
@@ -159,12 +161,15 @@ Apollo::Region::Region(
         //std::cout << "Model RoundRobin" << std::endl;
     }
     else if("PolicyNet" == model_str){
+        // Default hyperparameters.
         double lr = 1e-2;
         double beta = 0.5;
         double beta1 = 0.5;
         double beta2 = 0.9;
         double featureScaling = 64 * std::log(2.);
+        double threshold = 1.;
 
+        // Get hyperparameters from the environment variable.
         while (pos != std::string::npos){
             auto new_pos = Config::APOLLO_INIT_MODEL.find(",", pos+1);
             std::string varString = Config::APOLLO_INIT_MODEL.substr(pos + 1, new_pos);
@@ -183,12 +188,22 @@ Apollo::Region::Region(
                 beta2 = value;
             } else if (varName == "scale"){
                 featureScaling = value;
+            } else if (varName == "threshold"){
+                threshold = value;
             }
 
             pos = new_pos;
         }
 
-        model = ModelFactory::createPolicyNet(apollo->num_policies, 1, lr, beta, beta1, beta2, featureScaling);
+        // Build the model.
+        model = ModelFactory::createPolicyNet(apollo->num_policies, 1, lr, beta, beta1, beta2, featureScaling, threshold);
+
+        // If the environment variable is set, try to load the saved model for the region if it exists.
+        if (Config::APOLLO_MODEL_SAVE_DIR != ""){
+            std::string fileName = Config::APOLLO_MODEL_SAVE_DIR + "/" + std::string(name) + ".model";
+            PolicyNet *modelPtr = dynamic_cast<PolicyNet *>(model.get());
+            modelPtr->load(fileName);
+        }
     }
     else {
         std::cerr << "Invalid model env var: " + Config::APOLLO_INIT_MODEL << std::endl;
@@ -242,6 +257,17 @@ Apollo::Region::begin()
     //
 
     current_exec_time_begin = std::chrono::steady_clock::now();
+
+    // Use the GPU to take timing measurements if GPU is enabled.
+#ifdef APOLLO_ENABLE_CUDA
+    events.emplace_back();
+
+    cudaEventCreate(&(events.back().first));
+    cudaEventCreate(&(events.back().second));
+
+    cudaEventRecord(events.back().first);
+#endif
+
     return;
 }
 
@@ -391,10 +417,9 @@ Apollo::Region::end(double duration)
 void
 Apollo::Region::end(void)
 {
+    // Send end of loop event to GPU.
 #ifdef APOLLO_ENABLE_CUDA
-    if (apollo->isTrainCycle){
-        cudaDeviceSynchronize();
-    }
+    cudaEventRecord(events.back().second);
 #endif
 
     current_exec_time_end = std::chrono::steady_clock::now();

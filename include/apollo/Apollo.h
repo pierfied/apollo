@@ -103,6 +103,7 @@ class Apollo
 
         void flushAllRegionMeasurements(int step, TrainingPlan trainPlan = defaultNextCycle);
         void clearTrainRegionMeasurements();
+        void saveModels(std::string &directory);
 
     private:
         Apollo();

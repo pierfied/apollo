@@ -22,6 +22,9 @@ class Config {
         static int APOLLO_INIT_TRAIN;
         static int APOLLO_TRAIN_FREQ;
 
+        static std::string APOLLO_MODEL_SAVE_DIR;
+        static int APOLLO_SAVE_AFTER_TRAIN;
+
     private:
         Config();
 };

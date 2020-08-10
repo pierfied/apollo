@@ -31,6 +31,15 @@ The scaling used to normalize the inputs is set by (also see notes below):
 
 `APOLLO_INIT_MODEL="PolicyNet,scale=44.36"`
 
+Using the policy network may result in overhead that worssens performance in
+cases where the average execution time of a region is too low. In this case,
+the user can set a threshold where training and execution will be skipped for
+such regions and will only use the default policy. For example, to ensure
+that regions that take less than 0.001 seconds to execute only use the
+default policy, one can set:
+
+`APOLLO_INIT_MODEL="PolicyNet,threshold=0.001"`
+
 Note that the values used in the examples shown above are the default values
 used by Apollo if not set explicitly.
 

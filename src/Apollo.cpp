@@ -202,8 +202,8 @@ Apollo::Apollo()
 
     // Initialize config with defaults
     Config::APOLLO_INIT_MODEL          = apolloUtils::safeGetEnv( "APOLLO_INIT_MODEL", "Static,0" );
-    Config::APOLLO_COLLECTIVE_TRAINING = std::stoi( apolloUtils::safeGetEnv( "APOLLO_COLLECTIVE_TRAINING", "1" ) );
-    Config::APOLLO_LOCAL_TRAINING      = std::stoi( apolloUtils::safeGetEnv( "APOLLO_LOCAL_TRAINING", "0" ) );
+    Config::APOLLO_COLLECTIVE_TRAINING = std::stoi( apolloUtils::safeGetEnv( "APOLLO_COLLECTIVE_TRAINING", "0" ) );
+    Config::APOLLO_LOCAL_TRAINING      = std::stoi( apolloUtils::safeGetEnv( "APOLLO_LOCAL_TRAINING", "1" ) );
     Config::APOLLO_SINGLE_MODEL        = std::stoi( apolloUtils::safeGetEnv( "APOLLO_SINGLE_MODEL", "0" ) );
     Config::APOLLO_REGION_MODEL        = std::stoi( apolloUtils::safeGetEnv( "APOLLO_REGION_MODEL", "1" ) );
     Config::APOLLO_TRACE_MEASURES      = std::stoi( apolloUtils::safeGetEnv( "APOLLO_TRACE_MEASURES", "0" ) );
@@ -217,8 +217,11 @@ Apollo::Apollo()
     Config::APOLLO_RETRAIN_TIME_THRESHOLD   = std::stof( apolloUtils::safeGetEnv( "APOLLO_RETRAIN_TIME_THRESHOLD", "2.0" ) );
     Config::APOLLO_RETRAIN_REGION_THRESHOLD = std::stof( apolloUtils::safeGetEnv( "APOLLO_RETRAIN_REGION_THRESHOLD", "0.5" ) );
 
-    Config::APOLLO_INIT_TRAIN = std::stoi(apolloUtils::safeGetEnv("APOLLO_INIT_TRAIN", "0"));
-    Config::APOLLO_TRAIN_FREQ = std::stoi(apolloUtils::safeGetEnv("APOLLO_TRAIN_FREQ", "1"));
+    Config::APOLLO_INIT_TRAIN = std::stoi(apolloUtils::safeGetEnv("APOLLO_INIT_TRAIN", "100"));
+    Config::APOLLO_TRAIN_FREQ = std::stoi(apolloUtils::safeGetEnv("APOLLO_TRAIN_FREQ", "0"));
+
+    Config::APOLLO_MODEL_SAVE_DIR = apolloUtils::safeGetEnv("APOLLO_MODEL_SAVE_DIR", "");
+    Config::APOLLO_SAVE_AFTER_TRAIN = std::stoi(apolloUtils::safeGetEnv("APOLLO_SAVE_AFTER_TRAIN", "0"));
 
     //std::cout << "init model " << Config::APOLLO_INIT_MODEL << std::endl;
     //std::cout << "collective " << Config::APOLLO_COLLECTIVE_TRAINING << std::endl;
@@ -633,8 +636,22 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
 {
     int rank = mpiRank;  //Automatically 0 if not an MPI environment.
 
+    // Don't take the hit on overhead if just using the static policy.
+    if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("Static") != std::string::npos){
+        isTrainCycle = false;
+        return;
+    }
+
+    // Don't bother doing other preprocessing if using the policy network model.
     if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("PolicyNet") != std::string::npos){
+        // Only train if we're supposed to on this cycle.
         if (isTrainCycle){
+            // Make sure that the GPU is done so that all timing measurements are finished.
+#ifdef APOLLO_ENABLE_CUDA
+            cudaDeviceSynchronize();
+#endif
+
+            // Loop over all regions and train the corresponding networks.
             for( auto &it : regions ) {
                 Region *reg = it.second;
 
@@ -642,6 +659,8 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
                 std::vector<int> actions;
                 std::vector<double> rewards;
 
+                // Loop over each measurement and add to the training data.
+                int ind = 0;
                 for (auto &measure: reg->trainMeasures) {
                     auto state = std::get<0>(measure);
                     auto policy = std::get<1>(measure);
@@ -649,13 +668,34 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
 
                     states.push_back(state);
                     actions.push_back(policy);
+
+                    // If using the GPU use the GPU timing measurements for training.
+#ifdef APOLLO_ENABLE_CUDA
+                    float ms;
+                    cudaEventElapsedTime(&ms, (reg->events)[ind].first, (reg->events)[ind].second);
+                    rewards.push_back(-ms);
+
+                    // Cleanup the CUDA events.
+                    cudaEventDestroy((reg->events)[ind].first);
+                    cudaEventDestroy((reg->events)[ind].second);
+#else
                     rewards.push_back(-duration);
+#endif
+
+                    ind++;
                 }
 
+                // Clear the GPU timing measurements.
+#ifdef APOLLO_ENABLE_CUDA
+                reg->events.clear();
+#endif
+
+                // Do something bad to get access to the train method.
                 PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());
 
                 model->trainNet(states, actions, rewards);
 
+                // Clear the training measurements.
                 reg->trainMeasures.clear();
                 model->cache2.clear();
             }
@@ -665,6 +705,7 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
 
         cycleCount++;
 
+        // Make sure that we train on the next cycle if requested.
         switch (trainPlan) {
             case trainNextCycle:
                 isTrainCycle = true;
@@ -673,12 +714,17 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
                 isTrainCycle = false;
                 break;
             case defaultNextCycle:
-                if (cycleCount < Config::APOLLO_INIT_TRAIN || cycleCount % Config::APOLLO_TRAIN_FREQ == 0){
+                if (cycleCount < Config::APOLLO_INIT_TRAIN /*|| cycleCount % Config::APOLLO_TRAIN_FREQ == 0*/){
                     isTrainCycle = true;
                 } else{
                     isTrainCycle = false;
                 }
                 break;
+        }
+
+        // Save the models if saving is requested and training is completed.
+        if(Config::APOLLO_SAVE_AFTER_TRAIN && Config::APOLLO_MODEL_SAVE_DIR != "" && cycleCount == Config::APOLLO_INIT_TRAIN){
+            saveModels(Config::APOLLO_MODEL_SAVE_DIR);
         }
 
         return;
@@ -919,5 +965,25 @@ Apollo::clearTrainRegionMeasurements()
         Region *reg = it.second;
 
         reg->trainMeasures.clear();
+
+        // Clear/cleanup GPU timing measurements.
+#ifdef APOLLO_ENABLE_CUDA
+        for(auto &event: reg->events){
+            cudaEventDestroy(event.first);
+            cudaEventDestroy(event.second);
+        }
+
+        reg->events.clear();
+#endif
+    }
+}
+
+void Apollo::saveModels(std::string &directory) {
+    for (auto &it: regions){
+        Region *reg = it.second;
+
+        std::string fileName = directory + "/" + std::string(reg->name) + ".model";
+
+        reg->model->store(fileName);
     }
 }

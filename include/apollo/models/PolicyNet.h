@@ -154,16 +154,17 @@ public:
         }
     }
 
-private:
     int inputSize;
     int outputSize;
-    long stepNum = 0;
 
     double *weights;
+    double *bias;
+
+private:
+    long stepNum = 0;
     double *weights_m;
     double *weights_v;
     double *weights_grad;
-    double *bias;
     double *bias_m;
     double *bias_v;
     double *bias_grad;
@@ -332,6 +333,10 @@ public:
         layer3.step(learnRate, beta1, beta2);
     }
 
+    FCLayer layer1;
+    FCLayer layer2;
+    FCLayer layer3;
+
 private:
     int inputSize;
     int hiddenSize;
@@ -339,9 +344,6 @@ private:
     double learnRate;
     double beta1;
     double beta2;
-    FCLayer layer1;
-    FCLayer layer2;
-    FCLayer layer3;
     Relu relu1;
     Relu relu2;
     Softmax softmax;
@@ -350,7 +352,7 @@ private:
 class PolicyNet : public PolicyModel {
 public:
     PolicyNet(int num_policies, int num_features, double lr, double beta, double beta1, double beta2,
-            double featureScaling);
+            double featureScaling, double threshold);
 
     ~PolicyNet();
 
@@ -359,6 +361,7 @@ public:
     void trainNet(std::vector<std::vector<float>> &states, std::vector<int> &actions, std::vector<double> &rewards);
 
     void store(const std::string &filename);
+    void load(const std::string &filename);
 
     std::map<std::vector<float>, std::vector<double>> cache;
     std::unordered_map<float, std::vector<double>> cache2;
@@ -369,6 +372,7 @@ private:
     double rewardMovingAvg = 0;
     double beta;
     double featureScaling;
+    double threshold;
     int trainCount = 0;
 }; //end: PolicyNet (class)
 
