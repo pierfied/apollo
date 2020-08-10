@@ -66,8 +66,9 @@ class Apollo::Region {
 
         std::vector<std::tuple<std::vector<float>, int, double>> trainMeasures;
 
-        std::vector<cudaEvent_t> startEvents;
-        std::vector<cudaEvent_t> stopEvents;
+#ifdef APOLLO_ENABLE_CUDA
+        std::vector<std::pair<cudaEvent_t, cudaEvent_t>> events;
+#endif
 
     private:
         //

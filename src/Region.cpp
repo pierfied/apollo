@@ -51,10 +51,10 @@
 #include <mpi.h>
 #endif //ENABLE_MPI
 
-#ifdef APOLLO_ENABLE_CUDA
-#include <cuda_runtime_api.h>
 #include <apollo/models/PolicyNet.h>
 
+#ifdef APOLLO_ENABLE_CUDA
+#include <cuda_runtime_api.h>
 #endif
 
 int
@@ -152,13 +152,15 @@ Apollo::Region::Region(
         //std::cout << "Model RoundRobin" << std::endl;
     }
     else if("PolicyNet" == model_str){
+        // Default hyperparameters.
         double lr = 1e-2;
         double beta = 0.5;
         double beta1 = 0.5;
         double beta2 = 0.9;
         double featureScaling = 64 * std::log(2.);
-        double threshold = 0.001;
+        double threshold = 1.;
 
+        // Get hyperparameters from the environment variable.
         while (pos != std::string::npos){
             auto new_pos = Config::APOLLO_INIT_MODEL.find(",", pos+1);
             std::string varString = Config::APOLLO_INIT_MODEL.substr(pos + 1, new_pos);
@@ -184,6 +186,7 @@ Apollo::Region::Region(
             pos = new_pos;
         }
 
+        // Build the model.
         model = ModelFactory::createPolicyNet(apollo->num_policies, 1, lr, beta, beta1, beta2, featureScaling, threshold);
 
         // If the environment variable is set, try to load the saved model for the region if it exists.
@@ -246,14 +249,14 @@ Apollo::Region::begin()
 
     current_exec_time_begin = std::chrono::steady_clock::now();
 
+    // Use the GPU to take timing measurements if GPU is enabled.
 #ifdef APOLLO_ENABLE_CUDA
-    startEvents.emplace_back();
-    stopEvents.emplace_back();
+    events.emplace_back();
 
-    cudaEventCreate(&(startEvents.back()));
-    cudaEventCreate(&(stopEvents.back()));
+    cudaEventCreate(&(events.back().first));
+    cudaEventCreate(&(events.back().second));
 
-    cudaEventRecord(startEvents.back());
+    cudaEventRecord(events.back().first);
 #endif
 
     return;
@@ -405,12 +408,9 @@ Apollo::Region::end(double duration)
 void
 Apollo::Region::end(void)
 {
+    // Send end of loop event to GPU.
 #ifdef APOLLO_ENABLE_CUDA
-    cudaEventRecord(stopEvents.back());
-
-//    if (apollo->isTrainCycle){
-//        cudaDeviceSynchronize();
-//    }
+    cudaEventRecord(events.back().second);
 #endif
 
     current_exec_time_end = std::chrono::steady_clock::now();

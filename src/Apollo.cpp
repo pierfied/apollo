@@ -636,24 +636,22 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
 {
     int rank = mpiRank;  //Automatically 0 if not an MPI environment.
 
-//    for (auto &it: regions){
-//        Region *reg = it.second;
-//
-//        float ms;
-//        cudaEventElapsedTime(&ms, reg->startEvents[0], reg->stopEvents[0]);
-//
-//        std::cout << reg->name << " time: " << ms << std::endl;
-//    }
-
+    // Don't take the hit on overhead if just using the static policy.
     if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("Static") != std::string::npos){
         isTrainCycle = false;
         return;
     }
 
+    // Don't bother doing other preprocessing if using the policy network model.
     if (Config::APOLLO_LOCAL_TRAINING && Config::APOLLO_INIT_MODEL.find("PolicyNet") != std::string::npos){
+        // Only train if we're supposed to on this cycle.
         if (isTrainCycle){
+            // Make sure that the GPU is done so that all timing measurements are finished.
+#ifdef APOLLO_ENABLE_CUDA
             cudaDeviceSynchronize();
+#endif
 
+            // Loop over all regions and train the corresponding networks.
             for( auto &it : regions ) {
                 Region *reg = it.second;
 
@@ -661,30 +659,43 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
                 std::vector<int> actions;
                 std::vector<double> rewards;
 
+                // Loop over each measurement and add to the training data.
                 int ind = 0;
                 for (auto &measure: reg->trainMeasures) {
                     auto state = std::get<0>(measure);
                     auto policy = std::get<1>(measure);
                     auto duration = std::get<2>(measure);
 
-                    float ms;
-                    cudaEventElapsedTime(&ms, reg->startEvents[ind], reg->stopEvents[ind]);
-
                     states.push_back(state);
                     actions.push_back(policy);
-//                    rewards.push_back(-duration);
+
+                    // If using the GPU use the GPU timing measurements for training.
+#ifdef APOLLO_ENABLE_CUDA
+                    float ms;
+                    cudaEventElapsedTime(&ms, (reg->events)[ind].first, (reg->events)[ind].second);
                     rewards.push_back(-ms);
+
+                    // Cleanup the CUDA events.
+                    cudaEventDestroy((reg->events)[ind].first);
+                    cudaEventDestroy((reg->events)[ind].second);
+#else
+                    rewards.push_back(-duration);
+#endif
 
                     ind++;
                 }
 
-                reg->startEvents.clear();
-                reg->stopEvents.clear();
+                // Clear the GPU timing measurements.
+#ifdef APOLLO_ENABLE_CUDA
+                reg->events.clear();
+#endif
 
+                // Do something bad to get access to the train method.
                 PolicyNet *model = dynamic_cast<PolicyNet *>(reg->model.get());
 
                 model->trainNet(states, actions, rewards);
 
+                // Clear the training measurements.
                 reg->trainMeasures.clear();
                 model->cache2.clear();
             }
@@ -694,6 +705,7 @@ Apollo::flushAllRegionMeasurements(int step, TrainingPlan trainPlan)
 
         cycleCount++;
 
+        // Make sure that we train on the next cycle if requested.
         switch (trainPlan) {
             case trainNextCycle:
                 isTrainCycle = true;
@@ -953,6 +965,16 @@ Apollo::clearTrainRegionMeasurements()
         Region *reg = it.second;
 
         reg->trainMeasures.clear();
+
+        // Clear/cleanup GPU timing measurements.
+#ifdef APOLLO_ENABLE_CUDA
+        for(auto &event: reg->events){
+            cudaEventDestroy(event.first);
+            cudaEventDestroy(event.second);
+        }
+
+        reg->events.clear();
+#endif
     }
 }
 
