@@ -66,6 +66,12 @@ class Apollo::Region {
 
         std::vector<std::tuple<std::vector<float>, int, double>> trainMeasures;
 
+        static const char* nextFileName;
+        static int nextLineNumber;
+
+        std::string fileName;
+        int lineNumber;
+  
 #ifdef APOLLO_ENABLE_CUDA
         std::vector<std::pair<cudaEvent_t, cudaEvent_t>> events;
 #endif

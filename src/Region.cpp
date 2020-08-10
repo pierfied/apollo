@@ -110,6 +110,9 @@ Apollo::Region::getPolicyIndex(void)
 }
 
 
+const char* Apollo::Region::nextFileName = "";
+int Apollo::Region::nextLineNumber = -1;
+
 Apollo::Region::Region(
         const int num_features,
         const char  *regionName,
@@ -117,6 +120,12 @@ Apollo::Region::Region(
     :
         num_features(num_features)
 {
+    fileName = std::string(nextFileName);
+    lineNumber = nextLineNumber;
+
+    nextFileName = NULL;
+    nextLineNumber = -1;
+
     apollo = Apollo::instance();
     if( Config::APOLLO_NUM_POLICIES ) {
         apollo->num_policies = Config::APOLLO_NUM_POLICIES;
