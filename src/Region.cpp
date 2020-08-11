@@ -123,7 +123,7 @@ Apollo::Region::Region(
     fileName = std::string(nextFileName);
     lineNumber = nextLineNumber;
 
-    nextFileName = NULL;
+    nextFileName = "";
     nextLineNumber = -1;
 
     apollo = Apollo::instance();
