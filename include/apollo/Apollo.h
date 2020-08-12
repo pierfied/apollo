@@ -8,6 +8,7 @@
 
 #include <omp.h>
 
+#include "apollo/apollo-config.h"
 #include "apollo/Config.h"
 
 enum TrainingPlan{

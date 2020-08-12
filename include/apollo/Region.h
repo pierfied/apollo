@@ -7,6 +7,8 @@
 #include <memory>
 #include <map>
 
+#include "apollo/apollo-config.h"
+
 #include "apollo/Apollo.h"
 #include "apollo/PolicyModel.h"
 #include "apollo/TimingModel.h"

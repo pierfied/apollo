@@ -32,8 +32,8 @@
 // DEALINGS IN THE SOFTWARE.
 
 
-#ifndef APOLLO_CONFIG_H
-#define APOLLO_CONFIG_H
+#ifndef APOLLO_CMAKE_CONFIG_H
+#define APOLLO_CMAKE_CONFIG_H
 
 
 // Version information -- numerical and a version string
@@ -56,4 +56,4 @@
 #cmakedefine APOLLO_ENABLE_CUDA
 
 
-#endif // APOLLO_CONFIG_H
+#endif // APOLLO_CMAKE_CONFIG_H

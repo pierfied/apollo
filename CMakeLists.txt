@@ -125,10 +125,16 @@ set(APOLLO_CXX_FLAGS    "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${APOLLO_BUILD_TYP
 set(APOLLO_LINK_FLAGS   "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_LINK_FLAGS_${CMAKE_BUILD_TYPE}} ")
 
 
+if (ENABLE_CUDA)
+    find_package(CUDA REQUIRED)
+    set(APOLLO_ENABLE_CUDA ON)
+    include_directories(${CUDA_INCLUDE_DIRS})
+endif ()
+
 # Create a config header file
 configure_file(
     ${PROJECT_SOURCE_DIR}/apollo-config.h.in
-    ${PROJECT_BINARY_DIR}/apollo-config.h)
+    ${PROJECT_BINARY_DIR}/include/apollo/apollo-config.h)
 
 # Create pkg-confic .pc file
 set(PKG_CONFIG_INCLUDEDIR "\${prefix}/include")
@@ -152,7 +158,7 @@ install(FILES ${PROJECT_BINARY_DIR}/apollo-config.cmake
 install(EXPORT apollo
   DESTINATION share/cmake/apollo)
 
-install(FILES ${PROJECT_BINARY_DIR}/apollo-config.h
+install(FILES ${PROJECT_BINARY_DIR}/include/apollo/apollo-config.h
   DESTINATION include/apollo)
 
 install(FILES ${PROJECT_BINARY_DIR}/apollo.pc
@@ -194,12 +200,6 @@ if (OPENMP_FOUND)
 else()
     message(STATUS "---- OPENMP:  Not found.")
 endif(OPENMP_FOUND)
-
-if (ENABLE_CUDA)
-    find_package(CUDA REQUIRED)
-    set(APOLLO_ENABLE_CUDA ON)
-    include_directories(${CUDA_INCLUDE_DIRS})
-endif ()
 
 find_package(callpath REQUIRED)
 if(callpath_CONFIG_LOADED)
