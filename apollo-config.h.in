@@ -53,7 +53,7 @@
 #define APOLLO_CXX_FLAGS       "@APOLLO_CXX_FLAGS@"
 #define APOLLO_LINK_FLAGS      "@APOLLO_LINK_FLAGS@"
 
-
+#cmakedefine APOLLO_ENABLE_CUDA
 
 
 #endif // APOLLO_CONFIG_H

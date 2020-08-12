@@ -197,7 +197,7 @@ endif(OPENMP_FOUND)
 
 if (ENABLE_CUDA)
     find_package(CUDA REQUIRED)
-    add_definitions(-DAPOLLO_ENABLE_CUDA)
+    set(APOLLO_ENABLE_CUDA ON)
     include_directories(${CUDA_INCLUDE_DIRS})
 endif ()
 
