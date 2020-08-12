@@ -201,7 +201,7 @@ Apollo::Apollo()
     numThreads = ompDefaultNumThreads;
 
     // Initialize config with defaults
-    Config::APOLLO_INIT_MODEL          = apolloUtils::safeGetEnv( "APOLLO_INIT_MODEL", "Static,0" );
+    Config::APOLLO_INIT_MODEL          = apolloUtils::safeGetEnv( "APOLLO_INIT_MODEL", "Static" );
     Config::APOLLO_COLLECTIVE_TRAINING = std::stoi( apolloUtils::safeGetEnv( "APOLLO_COLLECTIVE_TRAINING", "0" ) );
     Config::APOLLO_LOCAL_TRAINING      = std::stoi( apolloUtils::safeGetEnv( "APOLLO_LOCAL_TRAINING", "1" ) );
     Config::APOLLO_SINGLE_MODEL        = std::stoi( apolloUtils::safeGetEnv( "APOLLO_SINGLE_MODEL", "0" ) );

@@ -144,10 +144,15 @@ Apollo::Region::Region(
     size_t pos = Config::APOLLO_INIT_MODEL.find(",");
     std::string model_str = Config::APOLLO_INIT_MODEL.substr(0, pos);
     if( "Static" == model_str ) {
-        int policy_choice = std::stoi( Config::APOLLO_INIT_MODEL.substr( pos+1 ) );
-        if( policy_choice < 0 || policy_choice >= numAvailablePolicies ) {
-            std::cerr << "Invalid policy_choice " << policy_choice << std::endl;
-            abort();
+        int policy_choice;
+        if (pos == std::string::npos){
+            policy_choice = numAvailablePolicies - 1;
+        } else {
+            policy_choice = std::stoi( Config::APOLLO_INIT_MODEL.substr( pos+1 ) );
+            if( policy_choice < 0 || policy_choice >= numAvailablePolicies ) {
+                std::cerr << "Invalid policy_choice " << policy_choice << std::endl;
+                abort();
+            }
         }
         model = ModelFactory::createStatic( apollo->num_policies, policy_choice );
         //std::cout << "Model Static policy " << policy_choice << std::endl;
